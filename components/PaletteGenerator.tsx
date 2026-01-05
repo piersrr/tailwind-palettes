@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
+import { Card, CardContent, CardFooter } from "./ui/card";
 import { Input } from "./ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { ColorPicker } from "./ColorPicker";
@@ -88,11 +88,7 @@ export function PaletteGenerator() {
   
   return (
     <div className="space-y-10">
-      <Card className="w-full max-w-5xl mx-auto">
-        <CardHeader>
-          <CardTitle>Tailwind Color Palette Generator</CardTitle>
-        </CardHeader>
-        
+      <Card className="w-full max-w-6xl mx-auto pt-6">        
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-4">
@@ -152,7 +148,7 @@ export function PaletteGenerator() {
             </div>
             
             <div className="space-y-4">
-              <Tabs defaultValue="tailwind" onValueChange={setActiveTab}>
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="grid grid-cols-2">
                   <TabsTrigger value="tailwind">Tailwind Config</TabsTrigger>
                   <TabsTrigger value="css">CSS Variables</TabsTrigger>
@@ -173,7 +169,17 @@ export function PaletteGenerator() {
                     </Button>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Add this @theme block to your CSS file (Tailwind v4)
+                    Add this @theme block to your CSS file (Tailwind v4). Then you can use 
+                    the colors as Tailwind utility classes. For example:
+                    <pre className="p-4 rounded bg-muted overflow-auto max-h-64 text-xs mt-2">
+                      {`bg-theme-500`}
+                    </pre> 
+                    <p className="text-sm text-muted-foreground mt-2">
+                      You can also use the colors as CSS variables in your CSS. For example:
+                      <pre className="p-4 rounded bg-muted overflow-auto max-h-64 text-xs mt-2">
+                        {`.class { background-color: var(--color-theme-500); }`}
+                      </pre> 
+                    </p>
                   </p>
                 </TabsContent>
                 
@@ -204,13 +210,12 @@ export function PaletteGenerator() {
               <PaletteIcon className="h-4 w-4" />
               <span>Click on any color to customize it with the color picker</span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-9 gap-4">
-              {palette.map((color, index) => (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-9 gap-3">
+              {palette.map((color) => (
                 <ColorSwatch 
                   key={color.index} 
                   color={color}
                   onColorChange={handleColorChange}
-                  isBaseColor={!useTwoColors && index === basePosition}
                 />
               ))}
             </div>
@@ -233,7 +238,7 @@ export function PaletteGenerator() {
       </Card>
       
       {showBentoPreview && palette.length > 0 && (
-        <div className="w-full max-w-5xl mx-auto border-t pt-8">
+        <div className="w-full max-w-6xl mx-auto border-t pt-8">
           <BentoLayout colorName={colorName} palette={palette} basePosition={useTwoColors ? 4 : basePosition} />
         </div>
       )}

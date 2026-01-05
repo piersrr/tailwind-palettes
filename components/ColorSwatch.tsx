@@ -1,7 +1,7 @@
 
 import { useState, useRef } from "react";
 import { Button } from "./ui/button";
-import { Tooltip } from "./ui/tooltip";
+import { Tooltip, TooltipTrigger, TooltipContent } from "./ui/tooltip";
 import { ColorInfo, stringToOklch } from "../utils/color-utils";
 import { CheckIcon, ClipboardCopyIcon, PaletteIcon } from "lucide-react";
 
@@ -11,13 +11,20 @@ interface ColorSwatchProps {
 }
 
 export function ColorSwatch({ color, onColorChange }: ColorSwatchProps) {
-  const [copied, setCopied] = useState(false);
+  const [copiedHex, setCopiedHex] = useState(false);
+  const [copiedOklch, setCopiedOklch] = useState(false);
   const colorPickerRef = useRef<HTMLInputElement>(null);
   
-  const handleCopy = (text: string) => {
+  const handleCopyHex = (text: string) => {
     navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setCopiedHex(true);
+    setTimeout(() => setCopiedHex(false), 2000);
+  };
+
+  const handleCopyOklch = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedOklch(true);
+    setTimeout(() => setCopiedOklch(false), 2000);
   };
   
   const handleColorClick = () => {
@@ -62,26 +69,46 @@ export function ColorSwatch({ color, onColorChange }: ColorSwatchProps) {
         </div>
       </div>
       
-      <div className="p-3 space-y-2 bg-card">
+      <div className="p-2 space-y-2 bg-card">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium">{color.index}</span>
-          <Tooltip content={copied ? "Copied!" : "Copy hex"}>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0"
-              onClick={() => handleCopy(color.hex)}
-            >
-              {copied ? <CheckIcon className="h-3 w-3" /> : <ClipboardCopyIcon className="h-3 w-3" />}
-            </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0"
+                onClick={() => handleCopyHex(color.hex)}
+              >
+                {copiedHex ? <CheckIcon className="h-3 w-3" /> : <ClipboardCopyIcon className="h-3 w-3" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {copiedHex ? "Copied!" : "Copy hex"}
+            </TooltipContent>
           </Tooltip>
         </div>
         
-        <div className="grid grid-cols-2 gap-1 text-xs">
-          <div className="font-mono">{color.hex}</div>
-          <div className="font-mono truncate" title={color.oklch}>
-            {color.oklch.length > 20 ? `${color.oklch.substring(0, 17)}...` : color.oklch}
+        <div className="flex flex-col gap-1 text-xs">
+          <div 
+            className="font-mono cursor-pointer hover:text-primary transition-colors"
+            onClick={() => handleCopyHex(color.hex)}
+          >
+            {color.hex}
           </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div 
+                className="font-mono truncate cursor-pointer hover:text-primary transition-colors"
+                onClick={() => handleCopyOklch(color.oklch)}
+              >
+                {color.oklch.length > 20 ? `${color.oklch.substring(0, 17)}...` : color.oklch}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              {copiedOklch ? "Copied!" : color.oklch}
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
     </div>
