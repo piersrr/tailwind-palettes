@@ -26,29 +26,37 @@ export function PaletteGenerator() {
   const [activeTab, setActiveTab] = useState("tailwind");
   const [showBentoPreview, setShowBentoPreview] = useState(true);
   const [basePosition, setBasePosition] = useState<number>(0);
+  const [isGenerating, setIsGenerating] = useState(false);
   
   useEffect(() => {
     generateColorPalette();
   }, [baseColor1, baseColor2, useTwoColors]);
   
   const generateColorPalette = () => {
-    let newPalette: ColorInfo[];
+    setIsGenerating(true);
     
-    if (useTwoColors) {
-      newPalette = generatePaletteFromTwoColors(baseColor1, baseColor2);
-    } else {
-      // Determine the base position for the main color
-      const position = determinePalettePosition(baseColor1);
-      setBasePosition(position);
-      newPalette = generatePalette(baseColor1);
-    }
-    
-    // Sort palette by index to ensure consistent order
-    newPalette.sort((a, b) => a.index - b.index);
-    setPalette(newPalette);
-    
-    // Log the palette for debugging
-    console.log("Generated palette:", newPalette);
+    // Use setTimeout to allow the spin animation to be visible
+    setTimeout(() => {
+      let newPalette: ColorInfo[];
+      
+      if (useTwoColors) {
+        newPalette = generatePaletteFromTwoColors(baseColor1, baseColor2);
+      } else {
+        // Determine the base position for the main color
+        const position = determinePalettePosition(baseColor1);
+        setBasePosition(position);
+        newPalette = generatePalette(baseColor1);
+      }
+      
+      // Sort palette by index to ensure consistent order
+      newPalette.sort((a, b) => a.index - b.index);
+      setPalette(newPalette);
+      
+      // Log the palette for debugging
+      console.log("Generated palette:", newPalette);
+      
+      setIsGenerating(false);
+    }, 300);
   };
   
   const handleColorChange = (colorIndex: number, newColor: ColorInfo) => {
@@ -88,7 +96,7 @@ export function PaletteGenerator() {
   
   return (
     <div className="space-y-10">
-      <Card className="w-full max-w-6xl mx-auto pt-6">        
+      <Card className="w-full max-w-7xl mx-auto pt-6">        
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-4">
@@ -140,9 +148,11 @@ export function PaletteGenerator() {
               
               <Button 
                 onClick={generateColorPalette}
-                className="w-full"
+                disabled={isGenerating}
+                className="w-full transition-all duration-200 hover:scale-[1.01]
+                hover:bg-primary/80 hover:shadow-lg active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                <RefreshCwIcon className="mr-2 h-4 w-4" />
+                <RefreshCwIcon className={`mr-2 h-4 w-4 transition-transform duration-200 ${isGenerating ? 'animate-spin' : ''}`} />
                 Generate Palette
               </Button>
             </div>
@@ -225,7 +235,7 @@ export function PaletteGenerator() {
         <CardFooter className="flex justify-between text-sm text-muted-foreground">
           <p>Generated palette for {colorName}</p>
           <div className="flex items-center gap-2">
-            <span>Bento Preview:</span>
+            <span>Preview:</span>
             <input 
               type="checkbox" 
               id="show-bento" 
@@ -238,7 +248,7 @@ export function PaletteGenerator() {
       </Card>
       
       {showBentoPreview && palette.length > 0 && (
-        <div className="w-full max-w-6xl mx-auto border-t pt-8">
+        <div className="w-full max-w-7xl mx-auto border-t pt-8">
           <BentoLayout colorName={colorName} palette={palette} basePosition={useTwoColors ? 4 : basePosition} />
         </div>
       )}

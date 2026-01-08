@@ -117,15 +117,15 @@ export function BentoLayout({ colorName, palette, basePosition }: BentoLayoutPro
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-6">
+    <div className="w-full max-w-7xl mx-auto space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="font-medium">Bento Layout Preview using {colorName} palette</h3>
+        <h3 className="font-medium">Layout Preview using {colorName} palette</h3>
       </div>
 
-      {/* Main Bento Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      {/* Main Bento Grid - No gaps, seamless layout */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-0 overflow-hidden rounded-2xl border border-border/50 shadow-xl bg-background">
         {/* Featured card - spans 2 columns and rows - Always uses the PRIMARY color */}
-        <Card className="md:col-span-2 md:row-span-2 group overflow-hidden" style={cardStyles.primary}>
+        <Card className="md:col-span-2 md:row-span-2 group overflow-hidden rounded-none border-0 shadow-none border-r border-b border-border/20" style={cardStyles.primary}>
           <CardHeader>
             <div className="flex justify-between items-start">
               <CardTitle className="text-xl">Dashboard Overview</CardTitle>
@@ -225,7 +225,7 @@ export function BentoLayout({ colorName, palette, basePosition }: BentoLayoutPro
         </Card>
 
         {/* Status card */}
-        <Card className="group" style={cardStyles.accent}>
+        <Card className="group rounded-none border-0 border-r border-b border-border/20 shadow-none" style={cardStyles.accent}>
           <CardHeader>
             <CardTitle className="text-base">System Status</CardTitle>
           </CardHeader>
@@ -278,7 +278,7 @@ export function BentoLayout({ colorName, palette, basePosition }: BentoLayoutPro
         </Card>
 
         {/* Tasks/todo card */}
-        <Card style={cardStyles.tertiary}>
+        <Card className="rounded-none border-0 border-r border-b md:border-r lg:border-r border-border/20 shadow-none" style={cardStyles.tertiary}>
           <CardHeader className="pb-2">
             <div className="flex justify-between items-center">
               <CardTitle className="text-base">Recent Tasks</CardTitle>
@@ -307,7 +307,7 @@ export function BentoLayout({ colorName, palette, basePosition }: BentoLayoutPro
         </Card>
 
         {/* Team card */}
-        <Card className="md:col-span-2" style={cardStyles.secondary}>
+        <Card className="md:col-span-2 rounded-none border-0 border-r border-b border-border/20 shadow-none" style={cardStyles.secondary}>
           <CardHeader className="pb-2">
             <div className="flex justify-between items-center">
               <CardTitle className="text-base">Team Members</CardTitle>
@@ -343,7 +343,7 @@ export function BentoLayout({ colorName, palette, basePosition }: BentoLayoutPro
         </Card>
 
         {/* Stats card */}
-        <Card style={cardStyles.neutral}>
+        <Card className="rounded-none border-0 border-r border-b md:border-r lg:border-r border-border/20 shadow-none" style={cardStyles.neutral}>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Weekly Stats</CardTitle>
           </CardHeader>
@@ -382,7 +382,7 @@ export function BentoLayout({ colorName, palette, basePosition }: BentoLayoutPro
         </Card>
 
         {/* Calendar card */}
-        <Card style={cardStyles.muted}>
+        <Card className="rounded-none border-0 border-r border-b md:border-r lg:border-r border-border/20 shadow-none" style={cardStyles.muted}>
           <CardHeader className="pb-2">
             <div className="flex justify-between items-center">
               <CardTitle className="text-base">Calendar</CardTitle>
@@ -415,7 +415,7 @@ export function BentoLayout({ colorName, palette, basePosition }: BentoLayoutPro
         </Card>
 
         {/* Image card */}
-        <Card className="overflow-hidden group md:col-span-2">
+        <Card className="overflow-hidden group md:col-span-2 rounded-none border-0 border-r border-b border-border/20 shadow-none">
           <div className="relative h-full">
             <ImageWithFallback
               src="https://images.unsplash.com/photo-1506744038136-46273834b3fb"
@@ -439,7 +439,7 @@ export function BentoLayout({ colorName, palette, basePosition }: BentoLayoutPro
         </Card>
 
         {/* Popular items card */}
-        <Card className="md:col-span-2" style={cardStyles.neutral}>
+        <Card className="md:col-span-2 rounded-none border-0 border-r border-b border-border/20 shadow-none" style={cardStyles.neutral}>
           <CardHeader className="pb-2">
             <div className="flex justify-between items-center">
               <CardTitle className="text-base">Popular Items</CardTitle>
@@ -468,7 +468,7 @@ export function BentoLayout({ colorName, palette, basePosition }: BentoLayoutPro
         </Card>
 
         {/* Quick actions card */}
-        <Card style={cardStyles.tertiary}>
+        <Card className="rounded-none border-0 border-r border-b md:border-r lg:border-r border-border/20 shadow-none" style={cardStyles.tertiary}>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Quick Actions</CardTitle>
           </CardHeader>
@@ -493,7 +493,7 @@ export function BentoLayout({ colorName, palette, basePosition }: BentoLayoutPro
         </Card>
 
         {/* Notifications card */}
-        <Card className="md:col-span-2" style={cardStyles.muted}>
+        <Card className="rounded-none border-0 border-r border-b border-border/20 shadow-none" style={cardStyles.muted}>
           <CardHeader className="pb-2">
             <div className="flex justify-between items-center">
               <CardTitle className="text-base">Recent Notifications</CardTitle>
@@ -522,7 +522,7 @@ export function BentoLayout({ colorName, palette, basePosition }: BentoLayoutPro
       </div>
 
       <div className="text-sm text-muted-foreground">
-        <p>This Bento layout automatically updates when you change colors in the palette generator. Try adjusting the colors above to see how the UI components adapt!</p>
+        <p>This layout automatically updates when you change colors above. Try adjusting the colors above to see how the UI components adapt!</p>
       </div>
     </div>
   );

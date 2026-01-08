@@ -4,21 +4,6 @@ type TailwindMapping = {
 };
 
 /**
- * Finds the closest Tailwind scale value for a given pixel measurement
- * @param value The pixel value to match
- * @param scale A record mapping scale values to Tailwind class names
- * @returns The closest matching Tailwind class name
- */
-function matchPxToScale(value: number, scale: Record<number, string>): string {
-  const closest = Object.keys(scale)
-    .map(Number)
-    .reduce((prev, curr) =>
-      Math.abs(curr - value) < Math.abs(Number(prev) - value) ? curr : prev
-    );
-  return scale[closest];
-}
-
-/**
  * Parses RGBA color values and converts to a standardized format
  * @param rgba The RGBA color string to parse
  * @returns A formatted RGBA color string

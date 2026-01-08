@@ -73,7 +73,7 @@ A comprehensive toolkit for working with Tailwind CSS more efficiently. Generate
 4. **Generate palette** - the tool automatically positions your color intelligently
 5. **Customize any color** by clicking on the color swatches
 6. **Copy the output** in either Tailwind v4 @theme format or CSS variables
-7. **Preview in context** using the live Bento layout below
+7. **Preview in context** using the live layout below
 
 #### Example Output (Tailwind v4)
 ```css
