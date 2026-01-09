@@ -9,7 +9,7 @@ interface HeaderProps {
 export function Header({ activePage, onPageChange }: HeaderProps) {
   return (
     <header className="w-full border-b bg-background">
-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-4">
+      <div className="mx-auto px-4 md:px-6 py-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold">Tailwind CSS Toolkit</h1>

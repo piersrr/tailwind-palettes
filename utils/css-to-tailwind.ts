@@ -11,9 +11,37 @@ type TailwindMapping = {
 function parseRgba(rgba: string): string {
   // Convert rgba(255,255,255,0.8) to tailwind style `text-white/80` where possible
   const match = rgba.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
-  if (!match) return `[${rgba}]`;
+  if (!match) return rgba;
   const [_, r, g, b, a] = match;
-  return `rgba(${r}, ${g}, ${b}, ${a ?? 1})`; // or map color to known Tailwind colors
+  return `rgba(${r}, ${g}, ${b}, ${a ?? 1})`;
+}
+
+/**
+ * Parses a color value for use in border-color classes
+ * @param color The color string to parse
+ * @returns A Tailwind border-color class
+ */
+function parseColorForBorder(color: string): string {
+  const trimmedColor = color.trim();
+  
+  // Handle common colors
+  if (commonColors[trimmedColor.toLowerCase()]) {
+    return `border-${commonColors[trimmedColor.toLowerCase()]}`;
+  }
+  
+  // Handle hex colors
+  if (trimmedColor.startsWith('#')) {
+    const hexColor = trimmedColor.replace(/\s+/g, '');
+    return `border-[${hexColor}]`;
+  }
+  
+  // Handle rgb/rgba colors
+  if (trimmedColor.startsWith('rgba') || trimmedColor.startsWith('rgb')) {
+    const parsedColor = parseRgba(trimmedColor);
+    return `border-[${parsedColor}]`;
+  }
+  
+  return `border-[${trimmedColor}]`;
 }
 
 // Define common Tailwind scales for spacing, font sizes, etc.
@@ -91,28 +119,47 @@ const tailwindMapping: TailwindMapping = {
     return `rounded-[${value}]`;
   },
   'border': (value) => {
-    const match = value.match(/(\d+)px\s+solid\s+(rgba?\([^)]+\)|#[a-fA-F0-9]{3,8}|[a-zA-Z]+)/);
-    if (!match) return `border-[${value}]`;
+    const trimmedValue = value.trim();
     
-    const [, width, color] = match;
-    const borderSize = width === '1' ? 'border' : `border-[${width}px]`;
-    
-    let borderColor = '';
-    if (color.startsWith('rgba') || color.startsWith('rgb')) {
-      const parsedColor = parseRgba(color);
-      borderColor = `border-[${parsedColor}]`;
-    } else if (commonColors[color.toLowerCase()]) {
-      borderColor = `border-${commonColors[color.toLowerCase()]}`;
-    } else {
-      borderColor = `border-[${color}]`;
+    // Handle "none" or "0"
+    if (trimmedValue === 'none' || trimmedValue === '0') {
+      return 'border-0';
     }
     
-    return `${borderSize} ${borderColor}`;
+    // Match border width, style, and color
+    // Pattern: [width]px [style] [color] or [width]px [color]
+    const match = trimmedValue.match(/(\d+)px\s+(?:solid|dashed|dotted|double|groove|ridge|inset|outset)\s+(.+)/i);
+    if (match) {
+      const [, width, color] = match;
+      const borderSize = width === '1' ? 'border' : `border-[${width}px]`;
+      const borderColor = parseColorForBorder(color.trim());
+      return `${borderSize} ${borderColor}`;
+    }
+    
+    // Try simpler pattern without style: [width]px [color]
+    const simpleMatch = trimmedValue.match(/(\d+)px\s+(.+)/i);
+    if (simpleMatch) {
+      const [, width, color] = simpleMatch;
+      const borderSize = width === '1' ? 'border' : `border-[${width}px]`;
+      const borderColor = parseColorForBorder(color.trim());
+      return `${borderSize} ${borderColor}`;
+    }
+    
+    // If it's just a color, return border with that color
+    if (trimmedValue.startsWith('#') || trimmedValue.startsWith('rgb') || commonColors[trimmedValue.toLowerCase()]) {
+      const borderColor = parseColorForBorder(trimmedValue);
+      return `border ${borderColor}`;
+    }
+    
+    return `border-[${trimmedValue}]`;
   },
   'background': (value) => {
-    if (value.includes('linear-gradient')) {
-      const match = value.match(/linear-gradient\((.+?)\)/);
-      if (!match) return `bg-[${value}]`;
+    // Trim whitespace
+    const trimmedValue = value.trim();
+    
+    if (trimmedValue.includes('linear-gradient')) {
+      const match = trimmedValue.match(/linear-gradient\((.+?)\)/);
+      if (!match) return `bg-[${trimmedValue}]`;
       
       const gradientContent = match[1];
       
@@ -163,37 +210,59 @@ const tailwindMapping: TailwindMapping = {
         const [from, via, to] = stops;
         return `bg-gradient-${direction} from-[${from}] via-[${via}] to-[${to}]`;
       }
-      return `bg-[${value}]`;
+      return `bg-[${trimmedValue}]`;
     }
     
-    // Handle solid colors
-    if (value.startsWith('#') || value.startsWith('rgb')) {
-      if (commonColors[value.toLowerCase()]) {
-        return `bg-${commonColors[value.toLowerCase()]}`;
+    // Handle background-image with URLs
+    if (trimmedValue.startsWith('url(')) {
+      return `bg-[${trimmedValue}]`;
+    }
+    
+    // Handle solid colors - check hex colors first
+    if (trimmedValue.startsWith('#')) {
+      // Normalize hex color (remove extra spaces, ensure proper format)
+      const hexColor = trimmedValue.replace(/\s+/g, '');
+      if (commonColors[hexColor.toLowerCase()]) {
+        return `bg-${commonColors[hexColor.toLowerCase()]}`;
       }
-      if (value.startsWith('rgba') || value.startsWith('rgb')) {
-        const parsedColor = parseRgba(value);
-        return `bg-[${parsedColor}]`;
-      }
-      return `bg-[${value}]`;
+      return `bg-[${hexColor}]`;
+    }
+    
+    // Handle rgb/rgba colors
+    if (trimmedValue.startsWith('rgba') || trimmedValue.startsWith('rgb')) {
+      const parsedColor = parseRgba(trimmedValue);
+      return `bg-[${parsedColor}]`;
     }
     
     // Handle named colors and other values
-    if (commonColors[value.toLowerCase()]) {
-      return `bg-${commonColors[value.toLowerCase()]}`;
+    if (commonColors[trimmedValue.toLowerCase()]) {
+      return `bg-${commonColors[trimmedValue.toLowerCase()]}`;
     }
     
-    return `bg-[${value}]`;
+    return `bg-[${trimmedValue}]`;
   },
   'background-color': (value) => {
-    if (commonColors[value.toLowerCase()]) {
-      return `bg-${commonColors[value.toLowerCase()]}`;
+    // Trim whitespace
+    const trimmedValue = value.trim();
+    
+    // Check common colors first
+    if (commonColors[trimmedValue.toLowerCase()]) {
+      return `bg-${commonColors[trimmedValue.toLowerCase()]}`;
     }
-    if (value.startsWith('rgba') || value.startsWith('rgb')) {
-      const parsedColor = parseRgba(value);
+    
+    // Handle hex colors
+    if (trimmedValue.startsWith('#')) {
+      const hexColor = trimmedValue.replace(/\s+/g, '');
+      return `bg-[${hexColor}]`;
+    }
+    
+    // Handle rgb/rgba colors
+    if (trimmedValue.startsWith('rgba') || trimmedValue.startsWith('rgb')) {
+      const parsedColor = parseRgba(trimmedValue);
       return `bg-[${parsedColor}]`;
     }
-    return `bg-[${value}]`;
+    
+    return `bg-[${trimmedValue}]`;
   },
   'box-shadow': (value) => {
     // Handle common shadow values
@@ -364,17 +433,35 @@ const tailwindMapping: TailwindMapping = {
       'flow-root': 'flow-root',
       'contents': 'contents'
     };
-    return displays[value] || `[display:${value}]`;
+    const mapped = displays[value];
+    // Tailwind doesn't have utility classes for all display values
+    // Use arbitrary values for non-standard ones
+    if (mapped && ['block', 'inline-block', 'inline', 'flex', 'inline-flex', 'grid', 'inline-grid', 'hidden', 'table', 'table-cell', 'table-row', 'flow-root', 'contents'].includes(mapped)) {
+      return mapped;
+    }
+    return `[display:${value}]`;
   },
   'color': (value) => {
-    if (commonColors[value.toLowerCase()]) {
-      return `text-${commonColors[value.toLowerCase()]}`;
+    const trimmedValue = value.trim();
+    
+    // Check common colors first
+    if (commonColors[trimmedValue.toLowerCase()]) {
+      return `text-${commonColors[trimmedValue.toLowerCase()]}`;
     }
-    if (value.startsWith('rgba') || value.startsWith('rgb')) {
-      const parsedColor = parseRgba(value);
+    
+    // Handle hex colors
+    if (trimmedValue.startsWith('#')) {
+      const hexColor = trimmedValue.replace(/\s+/g, '');
+      return `text-[${hexColor}]`;
+    }
+    
+    // Handle rgb/rgba colors
+    if (trimmedValue.startsWith('rgba') || trimmedValue.startsWith('rgb')) {
+      const parsedColor = parseRgba(trimmedValue);
       return `text-[${parsedColor}]`;
     }
-    return `text-[${value}]`;
+    
+    return `text-[${trimmedValue}]`;
   },
   'font-size': (value) => {
     const fontSizes: Record<string, string> = {
@@ -776,7 +863,7 @@ function mapSpacingValue(prefix: string, value: string): string {
   // Fallback to arbitrary value
   return isNegative 
     ? `-${prefix}-[${cleanValue}]`
-    : `${prefix}-[${value}]`;
+    : `${prefix}-[${cleanValue}]`;
 }
 
 /**
