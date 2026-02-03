@@ -36,7 +36,7 @@ export function ColorPicker({ label, value, onChange }: ColorPickerProps) {
   return (
     <div className="space-y-2">
       <Label htmlFor={`color-${label}`}>{label}</Label>
-      <div className="flex gap-2">
+      <div className="flex gap-2 items-center">
         <Input 
           id={`color-${label}`}
           type="text" 

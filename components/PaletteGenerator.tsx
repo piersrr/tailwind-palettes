@@ -96,10 +96,11 @@ export function PaletteGenerator() {
   
   return (
     <div className="space-y-10">
-      <Card className="w-full max-w-7xl mx-auto pt-6">        
+      <Card className="w-full max-w-7xl mx-auto pt-6 border-none p-0">        
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-4">
+              <div className="text-xl font-medium">Input your base color</div>
               <ColorPicker 
                 label="Base Color"
                 value={baseColor1}
@@ -137,7 +138,7 @@ export function PaletteGenerator() {
               )}
               
               <div className="space-y-2">
-                <label htmlFor="color-name">Color Name</label>
+                <label htmlFor="color-name">Color Name (optional)</label>
                 <Input 
                   id="color-name"
                   value={colorName}
@@ -149,7 +150,7 @@ export function PaletteGenerator() {
               <Button 
                 onClick={generateColorPalette}
                 disabled={isGenerating}
-                className="w-full transition-all duration-200 hover:scale-[1.01]
+                className="w-full transition-all duration-200 hover:scale-[1.01] h-10
                 hover:bg-primary/80 hover:shadow-lg active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 <RefreshCwIcon className={`mr-2 h-4 w-4 transition-transform duration-200 ${isGenerating ? 'animate-spin' : ''}`} />
@@ -157,7 +158,8 @@ export function PaletteGenerator() {
               </Button>
             </div>
             
-            <div className="space-y-4">
+            <div className="space-y-4 p-4 rounded-xl border border-gray-200 bg-gray-100">
+              <div className="text-md font-medium">Copy and paste the output to your project</div>
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="grid grid-cols-2">
                   <TabsTrigger value="tailwind">Tailwind Config</TabsTrigger>
@@ -166,7 +168,7 @@ export function PaletteGenerator() {
                 
                 <TabsContent value="tailwind" className="space-y-4">
                   <div className="relative">
-                    <pre className="p-4 rounded bg-muted overflow-auto max-h-64 text-xs">
+                    <pre className="p-4 rounded bg-muted overflow-auto max-h-64 text-xs border border-gray-200">
                       {generateTailwindTheme(colorName, palette)}
                     </pre>
                     <Button 
@@ -178,16 +180,16 @@ export function PaletteGenerator() {
                       {copied ? <CheckIcon className="h-4 w-4" /> : "Copy"}
                     </Button>
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-gray-600">
                     Add this @theme block to your CSS file (Tailwind v4). Then you can use 
                     the colors as Tailwind utility classes. For example:
-                    <pre className="p-4 rounded bg-muted overflow-auto max-h-64 text-xs mt-2">
-                      {`bg-theme-500`}
+                    <pre className="p-4 rounded bg-muted border border-gray-200 overflow-auto max-h-64 text-sm mt-2 whitespace-pre-wrap break-words">
+                      {`bg-${colorName || 'theme'}-500`}
                     </pre> 
-                    <p className="text-sm text-muted-foreground mt-2">
+                    <p className="text-sm text-gray-600 mt-2">
                       You can also use the colors as CSS variables in your CSS. For example:
-                      <pre className="p-4 rounded bg-muted overflow-auto max-h-64 text-xs mt-2">
-                        {`.class { background-color: var(--color-theme-500); }`}
+                      <pre className="p-4 rounded bg-muted border border-gray-200 overflow-auto max-h-64 text-sm mt-2 whitespace-pre-wrap break-words">
+                        {`.class-name { background-color: var(--color-${colorName || 'theme'}-500); }`}
                       </pre> 
                     </p>
                   </p>

@@ -1,5 +1,6 @@
 import { Button } from "./ui/button";
 import { CodeIcon, PaletteIcon } from "lucide-react";
+import prkBlack from "../prk-black.png";
 
 interface HeaderProps {
   activePage: string;
@@ -11,15 +12,27 @@ export function Header({ activePage, onPageChange }: HeaderProps) {
     <header className="w-full border-b bg-background">
       <div className="mx-auto px-4 md:px-6 py-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">Tailwind CSS Toolkit</h1>
+          <div className="flex items-center gap-4">
+            <a
+              href="https://piers.cc"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0"
+              aria-label="Piers"
+            >
+              <img src={prkBlack} alt="Piers" className="h-10" />
+            </a>
+            <div>
+              <h1 className="text-2xl font-bold">Tailwind CSS Toolkit</h1>
             <p className="text-sm text-muted-foreground mt-1">
               Generate color palettes and convert CSS to Tailwind classes
             </p>
+            </div>
           </div>
           
           <nav className="flex items-center gap-2">
             <Button
+              type="button"
               variant={activePage === "palette" ? "default" : "ghost"}
               onClick={() => onPageChange("palette")}
               className="flex items-center gap-2"
@@ -28,6 +41,7 @@ export function Header({ activePage, onPageChange }: HeaderProps) {
               Color Palette Generator
             </Button>
             <Button
+              type="button"
               variant={activePage === "css-to-tailwind" ? "default" : "ghost"}
               onClick={() => onPageChange("css-to-tailwind")}
               className="flex items-center gap-2"
