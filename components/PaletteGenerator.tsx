@@ -20,7 +20,12 @@ import {
   ColorInfo 
 } from "../utils/color-utils";
 import { cssColorToHex } from "../utils/oklch-culori";
-import { CheckIcon, Loader2Icon, PaletteIcon, InfoIcon } from "lucide-react";
+import { CheckIcon, CircleHelpIcon, Loader2Icon, PaletteIcon, InfoIcon } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "./ui/tooltip";
 
 export function PaletteGenerator() {
   const [baseColor1, setBaseColor1] = useState("#3b82f6");
@@ -122,6 +127,37 @@ export function PaletteGenerator() {
                         OKLCH
                       </TabsTrigger>
                     </TabsList>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          aria-label="What is the difference between Hex and OKLCH?"
+                        >
+                          <CircleHelpIcon className="h-4 w-4" aria-hidden />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        showArrow={false}
+                        side="bottom"
+                        align="start"
+                        sideOffset={10}
+                        className="max-w-[min(22rem,calc(100vw-2rem))] border border-neutral-200/80 bg-white px-4 py-3.5 text-left text-neutral-900 shadow-lg rounded-xl text-sm leading-relaxed animate-in fade-in-0 zoom-in-95 duration-200 data-[state=closed]:duration-150"
+                      >
+                        <p className="font-semibold text-neutral-950 mb-2">
+                          Hex vs OKLCH
+                        </p>
+                        <p className="text-neutral-800 mb-2">
+                          <span className="font-medium text-neutral-950">Hex</span>{" "}
+                          is the classic <code className="rounded bg-neutral-100 px-1 py-0.5 text-[0.8125rem] text-neutral-900">#RRGGBB</code>{" "}
+                          format. It is compact and works everywhere, but it does not describe how humans perceive lightness or colorfulness.
+                        </p>
+                        <p className="text-neutral-800">
+                          <span className="font-medium text-neutral-950">OKLCH</span>{" "}
+                          expresses color as perceived lightness (<code className="rounded bg-neutral-100 px-1 py-0.5 text-[0.8125rem]">L</code>), chroma (<code className="rounded bg-neutral-100 px-1 py-0.5 text-[0.8125rem]">C</code>), and hue (<code className="rounded bg-neutral-100 px-1 py-0.5 text-[0.8125rem]">H</code>). Adjusting steps in OKLCH tends to produce smoother, more predictable ramps when building palettes.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
                     {isGenerating ? (
                       <Loader2Icon
                         className="h-4 w-4 shrink-0 animate-spin text-muted-foreground"
