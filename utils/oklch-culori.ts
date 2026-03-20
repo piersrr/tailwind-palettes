@@ -29,3 +29,10 @@ export function oklchToSrgbHex(l: number, c: number, h: number): string {
   const hex = formatHex({ mode: "oklch", l, c, h });
   return hex ?? "#808080";
 }
+
+/** Any CSS color string culori understands → sRGB hex (for palette base / hex mode). */
+export function cssColorToHex(input: string): string {
+  const color = parse(input);
+  if (!color) return "#808080";
+  return formatHex(color) ?? "#808080";
+}

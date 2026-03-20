@@ -6,15 +6,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { ColorPicker } from "./ColorPicker";
 import { ColorSwatch } from "./ColorSwatch";
 import { BentoLayout } from "./BentoLayout";
+import { OklchColorEditor, clampOklch } from "./OklchColorEditor";
 import { 
   generatePalette, 
   generatePaletteFromTwoColors, 
   generateTailwindTheme,
   generateCssVariables,
   determinePalettePosition,
+  formatOklch,
+  stringToOklch,
+  PALETTE_SHADE_INDICES,
+  PALETTE_INDEX_500,
   ColorInfo 
 } from "../utils/color-utils";
-import { CheckIcon, RefreshCwIcon, PaletteIcon, InfoIcon } from "lucide-react";
+import { cssColorToHex } from "../utils/oklch-culori";
+import { CheckIcon, Loader2Icon, PaletteIcon, InfoIcon } from "lucide-react";
 
 export function PaletteGenerator() {
   const [baseColor1, setBaseColor1] = useState("#3b82f6");
@@ -27,37 +33,37 @@ export function PaletteGenerator() {
   const [showBentoPreview, setShowBentoPreview] = useState(true);
   const [basePosition, setBasePosition] = useState<number>(0);
   const [isGenerating, setIsGenerating] = useState(false);
-  
+  const [inputColorSpace, setInputColorSpace] = useState<"hex" | "oklch">("hex");
+
+  const handleInputColorSpaceChange = (value: string) => {
+    const next = value as "hex" | "oklch";
+    if (next === "hex" && inputColorSpace === "oklch") {
+      setBaseColor1(cssColorToHex(baseColor1));
+      setBaseColor2(cssColorToHex(baseColor2));
+    }
+    setInputColorSpace(next);
+  };
+
   useEffect(() => {
-    generateColorPalette();
-  }, [baseColor1, baseColor2, useTwoColors]);
-  
-  const generateColorPalette = () => {
     setIsGenerating(true);
-    
-    // Use setTimeout to allow the spin animation to be visible
-    setTimeout(() => {
+    const id = window.setTimeout(() => {
       let newPalette: ColorInfo[];
-      
+
       if (useTwoColors) {
         newPalette = generatePaletteFromTwoColors(baseColor1, baseColor2);
       } else {
-        // Determine the base position for the main color
         const position = determinePalettePosition(baseColor1);
         setBasePosition(position);
         newPalette = generatePalette(baseColor1);
       }
-      
-      // Sort palette by index to ensure consistent order
+
       newPalette.sort((a, b) => a.index - b.index);
       setPalette(newPalette);
-      
-      // Log the palette for debugging
-      console.log("Generated palette:", newPalette);
-      
       setIsGenerating(false);
-    }, 300);
-  };
+    }, 0);
+
+    return () => window.clearTimeout(id);
+  }, [baseColor1, baseColor2, useTwoColors]);
   
   const handleColorChange = (colorIndex: number, newColor: ColorInfo) => {
     setPalette(prev => 
@@ -83,8 +89,7 @@ export function PaletteGenerator() {
   const getPositionInfo = () => {
     if (useTwoColors) return null;
     
-    const shadeMap = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900];
-    const baseShade = shadeMap[basePosition];
+    const baseShade = PALETTE_SHADE_INDICES[basePosition];
     
     return {
       position: basePosition,
@@ -100,12 +105,46 @@ export function PaletteGenerator() {
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-4">
-              <div className="text-xl font-medium">Input your base color</div>
-              <ColorPicker 
-                label="Base Color"
-                value={baseColor1}
-                onChange={setBaseColor1}
-              />
+              <div className="space-y-3">
+                <div className="text-xl font-medium">Input your base color</div>
+                <Tabs
+                  value={inputColorSpace}
+                  onValueChange={handleInputColorSpaceChange}
+                  className="w-full gap-4"
+                  aria-label="Base color format"
+                >
+                  <div className="flex flex-wrap items-center gap-3">
+                    <TabsList className="grid h-11 w-full max-w-xs grid-cols-2 p-1">
+                      <TabsTrigger value="hex" className="rounded-full px-4">
+                        Hex
+                      </TabsTrigger>
+                      <TabsTrigger value="oklch" className="rounded-full px-4">
+                        OKLCH
+                      </TabsTrigger>
+                    </TabsList>
+                    {isGenerating ? (
+                      <Loader2Icon
+                        className="h-4 w-4 shrink-0 animate-spin text-muted-foreground"
+                        aria-label="Updating palette"
+                      />
+                    ) : null}
+                  </div>
+                  <TabsContent value="hex" className="mt-0 outline-none">
+                    <ColorPicker 
+                      label="Base Color"
+                      value={baseColor1}
+                      onChange={setBaseColor1}
+                    />
+                  </TabsContent>
+                  <TabsContent value="oklch" className="mt-0 outline-none">
+                    <OklchColorEditor
+                      label="Base Color"
+                      value={clampOklch(stringToOklch(baseColor1))}
+                      onChange={(o) => setBaseColor1(formatOklch(o))}
+                    />
+                  </TabsContent>
+                </Tabs>
+              </div>
               
               <div className="flex items-center gap-2">
                 <input 
@@ -129,11 +168,18 @@ export function PaletteGenerator() {
                 </div>
               )}
               
-              {useTwoColors && (
+              {useTwoColors && inputColorSpace === "hex" && (
                 <ColorPicker 
                   label="Second Color"
                   value={baseColor2}
                   onChange={setBaseColor2}
+                />
+              )}
+              {useTwoColors && inputColorSpace === "oklch" && (
+                <OklchColorEditor
+                  label="Second Color"
+                  value={clampOklch(stringToOklch(baseColor2))}
+                  onChange={(o) => setBaseColor2(formatOklch(o))}
                 />
               )}
               
@@ -146,16 +192,6 @@ export function PaletteGenerator() {
                   placeholder="e.g., primary, brand, accent"
                 />
               </div>
-              
-              <Button 
-                onClick={generateColorPalette}
-                disabled={isGenerating}
-                className="w-full transition-all duration-200 hover:scale-[1.01] h-10
-                hover:bg-primary/80 hover:shadow-lg active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                <RefreshCwIcon className={`mr-2 h-4 w-4 transition-transform duration-200 ${isGenerating ? 'animate-spin' : ''}`} />
-                Generate Palette
-              </Button>
             </div>
             
             <div className="space-y-4 p-4 rounded-xl border border-gray-200 bg-gray-100">
@@ -222,7 +258,7 @@ export function PaletteGenerator() {
               <PaletteIcon className="h-4 w-4" />
               <span>Click on any color to customize it with the color picker</span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-9 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-10 gap-3">
               {palette.map((color) => (
                 <ColorSwatch 
                   key={color.index} 
@@ -251,7 +287,7 @@ export function PaletteGenerator() {
       
       {showBentoPreview && palette.length > 0 && (
         <div className="w-full max-w-7xl mx-auto border-t pt-8">
-          <BentoLayout colorName={colorName} palette={palette} basePosition={useTwoColors ? 4 : basePosition} />
+          <BentoLayout colorName={colorName} palette={palette} basePosition={useTwoColors ? PALETTE_INDEX_500 : basePosition} />
         </div>
       )}
     </div>

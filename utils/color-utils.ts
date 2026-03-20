@@ -1,4 +1,20 @@
-import { colord } from "colord";
+import { cssColorToHex, oklchToSrgbHex, srgbToOklch } from "./oklch-culori";
+
+/** Tailwind-style stops from lightest to darkest */
+export const PALETTE_SHADE_INDICES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900] as const;
+
+export const DEFAULT_PALETTE_COUNT = PALETTE_SHADE_INDICES.length;
+
+/** Palette array index where shade 500 lives (for two-color preview anchor) */
+export const PALETTE_INDEX_500 = PALETTE_SHADE_INDICES.indexOf(500);
+
+/**
+ * Softer chroma on the light end so 50 is a whisper and 100 is muted (not full chroma on pastels).
+ */
+export function chromaMultiplierForPaletteStep(stepIndex: number): number {
+  const table = [0.11, 0.35, 0.56, 0.78, 0.92, 1, 1, 1, 1, 1] as const;
+  return table[stepIndex] ?? 1;
+}
 
 /**
  * Convert hex to RGB
@@ -148,89 +164,83 @@ export function parseOklch(oklchStr: string): { l: number, c: number, h: number 
  * Convert a string color to our internal OKLCH representation
  */
 export function stringToOklch(color: string): { l: number, c: number, h: number } {
-  // Check if it's already an OKLCH string
   const parsed = parseOklch(color);
   if (parsed) return parsed;
-  
-  // Otherwise, use colord to parse the color to hex, then convert to our OKLCH
-  const hex = colord(color).toHex();
-  const rgb = hexToRgb(hex);
-  
-  if (!rgb) {
-    return { l: 0.5, c: 0.1, h: 0 }; // Default fallback
-  }
-  
-  return rgbToOklch(rgb.r, rgb.g, rgb.b);
+  return srgbToOklch(color);
 }
 
 /**
  * Convert our OKLCH representation to hex
  */
 export function oklchToHex(l: number, c: number, h: number): string {
-  const rgb = oklchToRgb(l, c, h);
-  return rgbToHex(rgb.r, rgb.g, rgb.b);
+  return oklchToSrgbHex(l, c, h);
 }
 
 /**
- * Determine the appropriate palette position for a color based on its lightness
- * Returns 0-8 index (corresponding to stops 50-900)
+ * Map a color's lightness to a palette slot index (0 = shade 50, last = 900).
  */
-export function determinePalettePosition(color: string): number {
+export function determinePalettePosition(
+  color: string,
+  paletteLength: number = DEFAULT_PALETTE_COUNT,
+): number {
   const oklch = stringToOklch(color);
   const lightness = oklch.l;
-  
-  // Map lightness to appropriate palette position
-  // Very light colors (near white) should be at position 0 (50)
-  // Very dark colors (near black) should be at position 8 (900)
-  // Mid-range colors should be around position 4-5 (500-600)
-  
-  if (lightness >= 0.95) return 0; // White-like colors → position 0 (50)
-  if (lightness <= 0.15) return 8; // Black-like colors → position 8 (900)
-  
-  // For colors in between, create a mapping that's weighted toward the middle
-  // This places mid-tones around the 400-600 range
-  
-  // Map 0.15-0.95 to 0-8, with 0.5-0.6 centered around positions 4-5
-  if (lightness < 0.3) return Math.round(8 - (lightness - 0.15) / 0.15 * 2); // Very dark → 6-8
-  if (lightness < 0.5) return Math.round(6 - (lightness - 0.3) / 0.2 * 2); // Dark → 4-6
-  if (lightness < 0.7) return Math.round(4 - (lightness - 0.5) / 0.2 * 2); // Medium → 2-4
-  return Math.round(2 - (lightness - 0.7) / 0.25 * 2); // Light → 0-2
+  const last = paletteLength - 1;
+  const scale = last / 8;
+
+  if (lightness >= 0.95) return 0;
+  if (lightness <= 0.15) return last;
+
+  if (lightness < 0.3) {
+    return Math.min(last, Math.max(0, Math.round(last - (lightness - 0.15) / 0.15 * 2 * scale)));
+  }
+  if (lightness < 0.5) {
+    return Math.min(last, Math.max(0, Math.round(last - 2 * scale - (lightness - 0.3) / 0.2 * 2 * scale)));
+  }
+  if (lightness < 0.7) {
+    return Math.min(last, Math.max(0, Math.round(last - 4 * scale - (lightness - 0.5) / 0.2 * 2 * scale)));
+  }
+  return Math.min(last, Math.max(0, Math.round(last - 6 * scale - (lightness - 0.7) / 0.25 * 2 * scale)));
 }
 
 /**
- * Generate a color palette from a base color
+ * Generate a color palette from a base color (default: 50–900 with softer light tints).
  */
-export function generatePalette(baseColor: string, count: number = 9): ColorInfo[] {
+export function generatePalette(
+  baseColor: string,
+  count: number = DEFAULT_PALETTE_COUNT,
+): ColorInfo[] {
   const color = stringToOklch(baseColor);
   const palette: ColorInfo[] = [];
-  
-  // Determine where in the palette the base color should be placed
-  const basePosition = determinePalettePosition(baseColor);
-  
-  // Generate a range of lightness values
-  const minLightness = 0.15; // Very dark
-  const maxLightness = 0.98; // Very light
+
+  const basePosition = determinePalettePosition(baseColor, count);
+
+  const minLightness = 0.15;
+  const maxLightness = 0.985;
   const lightnessRange = maxLightness - minLightness;
-  
+
   for (let i = 0; i < count; i++) {
-    // Calculate lightness for this step
     const lightness = maxLightness - (i * (lightnessRange / (count - 1)));
-    
-    // If this is the base position, use the original color's values
-    // otherwise, create a new color with adjusted lightness
-    const hex = i === basePosition 
-      ? colord(baseColor).toHex() 
-      : oklchToHex(lightness, color.c, color.h);
-    
-    // For the base position color, get its actual OKLCH values
-    const oklchValue = i === basePosition
+    const isBase = i === basePosition;
+    const chromaMul =
+      count === DEFAULT_PALETTE_COUNT ? chromaMultiplierForPaletteStep(i) : 1;
+    const cOut = isBase ? color.c : color.c * chromaMul;
+
+    const hex = isBase ? cssColorToHex(baseColor) : oklchToHex(lightness, cOut, color.h);
+
+    const oklchValue = isBase
       ? formatOklch(color)
-      : formatOklch({ l: lightness, c: color.c, h: color.h });
-    
+      : formatOklch({ l: lightness, c: cOut, h: color.h });
+
+    const shadeIndex =
+      count === DEFAULT_PALETTE_COUNT && i < PALETTE_SHADE_INDICES.length
+        ? PALETTE_SHADE_INDICES[i]
+        : (i + 1) * 100;
+
     palette.push({
-      index: (i + 1) * 100,
-      hex: hex,
-      oklch: oklchValue
+      index: shadeIndex,
+      hex,
+      oklch: oklchValue,
     });
   }
 
@@ -238,41 +248,46 @@ export function generatePalette(baseColor: string, count: number = 9): ColorInfo
 }
 
 /**
- * Generate a color palette from two base colors by interpolation
- * This version doesn't currently use base position, but could be enhanced
+ * Generate a color palette from two base colors by interpolation (same stops as single-base).
  */
-export function generatePaletteFromTwoColors(color1: string, color2: string, count: number = 9): ColorInfo[] {
+export function generatePaletteFromTwoColors(
+  color1: string,
+  color2: string,
+  count: number = DEFAULT_PALETTE_COUNT,
+): ColorInfo[] {
   const c1 = stringToOklch(color1);
   const c2 = stringToOklch(color2);
   const palette: ColorInfo[] = [];
 
   for (let i = 0; i < count; i++) {
-    // Calculate the mix ratio
     const ratio = i / (count - 1);
-    
-    // Interpolate between the two colors
+
     const l = c1.l + (c2.l - c1.l) * ratio;
-    const c = c1.c + (c2.c - c1.c) * ratio;
-    
-    // For hue, we need to handle the circular nature
+    let c = c1.c + (c2.c - c1.c) * ratio;
+    if (count === DEFAULT_PALETTE_COUNT) {
+      c *= chromaMultiplierForPaletteStep(i);
+    }
+
     let h1 = c1.h;
     let h2 = c2.h;
-    
-    // Ensure we take the shortest path around the hue circle
+
     if (Math.abs(h2 - h1) > 180) {
       if (h1 < h2) h1 += 360;
       else h2 += 360;
     }
-    
+
     const h = (h1 + (h2 - h1) * ratio) % 360;
-    
-    // Create the interpolated color
+
     const hex = oklchToHex(l, c, h);
-    
+    const shadeIndex =
+      count === DEFAULT_PALETTE_COUNT && i < PALETTE_SHADE_INDICES.length
+        ? PALETTE_SHADE_INDICES[i]
+        : (i + 1) * 100;
+
     palette.push({
-      index: (i + 1) * 100,
-      hex: hex,
-      oklch: formatOklch({ l, c, h })
+      index: shadeIndex,
+      hex,
+      oklch: formatOklch({ l, c, h }),
     });
   }
 
