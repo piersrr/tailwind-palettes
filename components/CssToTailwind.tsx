@@ -1,9 +1,12 @@
-
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { Button } from "./ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "./ui/card";
 import { Textarea } from "./ui/textarea";
-import { convertCssToTailwind, preprocessCssInput } from "../utils/css-to-tailwind";
+import {
+  convertCssToTailwind,
+  preprocessCssInput,
+  cssDeclarationsToReactStyle,
+} from "../utils/css-to-tailwind";
 import { CheckIcon, ClipboardCopyIcon, ArrowRightIcon, TrashIcon } from "lucide-react";
 
 export function CssToTailwind() {
@@ -12,6 +15,11 @@ export function CssToTailwind() {
   const [copied, setCopied] = useState(false);
   const outputRef = useRef<HTMLDivElement>(null);
   
+  const previewStyle = useMemo(
+    () => cssDeclarationsToReactStyle(cssInput),
+    [cssInput],
+  );
+
   const handleConvert = () => {
     const preprocessed = preprocessCssInput(cssInput);
     const result = convertCssToTailwind(preprocessed);
@@ -28,10 +36,14 @@ export function CssToTailwind() {
     setTailwindOutput("");
   };
   
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(tailwindOutput);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(tailwindOutput);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
   };
   
   // Example CSS snippets to help users get started
@@ -87,9 +99,13 @@ opacity: 0.8;`
   ];
   
   return (
-    <Card className="w-full max-w-5xl">
+    <Card className="w-full max-w-5xl mx-auto shadow-sm">
       <CardHeader>
         <CardTitle>CSS to Tailwind Converter</CardTitle>
+        <CardDescription>
+          Paste declarations, a rule block, or HTML with a <code className="text-xs">style</code>{" "}
+          attribute—then copy the utility string for your project.
+        </CardDescription>
       </CardHeader>
       
       <CardContent className="space-y-6">
@@ -124,10 +140,18 @@ background: #f8f9fa;
 border-radius: 8px;`}
                 value={cssInput}
                 onChange={(e) => setCssInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                    e.preventDefault();
+                    if (cssInput.trim()) handleConvert();
+                  }
+                }}
                 className="min-h-[240px] font-mono text-sm"
               />
               <p className="text-xs text-muted-foreground">
-                Paste CSS properties, inline style attributes, or a CSS rule block. The converter supports common CSS properties and will automatically map them to Tailwind classes.
+                Paste CSS properties, inline style attributes, or a CSS rule block. The converter
+                supports common CSS properties and will automatically map them to Tailwind classes.{" "}
+                <span className="text-foreground/80">⌘/Ctrl + Enter</span> converts.
               </p>
             </div>
             
@@ -174,19 +198,47 @@ border-radius: 8px;`}
                     <code className="text-sm font-mono whitespace-pre-wrap break-all">
                       {tailwindOutput}
                     </code>
-                    
-                    <div className="mt-4 pt-4 border-t">
-                      <p className="text-sm font-medium mb-2">Preview:</p>
-                      <div className="border border-dashed rounded p-4 flex justify-center">
-                        <div className={tailwindOutput}>
-                          Element with applied classes
+
+                    <div className="mt-4 pt-4 border-t space-y-3">
+                      <p className="text-sm font-medium">Preview</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <p className="text-xs text-muted-foreground">Your CSS (inline)</p>
+                          <div className="border border-dashed border-border rounded-md p-4 flex justify-center items-center min-h-[88px] bg-background/50">
+                            <div style={previewStyle} className="text-sm">
+                              Sample element
+                            </div>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-xs text-muted-foreground">Tailwind utilities</p>
+                          <div className="border border-dashed border-border rounded-md p-4 flex justify-center items-center min-h-[88px] bg-background/50">
+                            <div className={`text-sm ${tailwindOutput}`}>Sample element</div>
+                          </div>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            This app only ships utilities Tailwind finds in source files—dynamic
+                            class strings may look partial here; your project will include them once
+                            you paste the classes into components.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : cssInput.trim() ? (
+                  <div className="space-y-3 text-muted-foreground">
+                    <p className="text-sm">Run convert to see Tailwind utilities.</p>
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-foreground">CSS preview</p>
+                      <div className="border border-dashed border-border rounded-md p-4 flex justify-center items-center min-h-[88px] bg-background/50">
+                        <div style={previewStyle} className="text-sm text-foreground">
+                          Sample element
                         </div>
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="h-full flex items-center justify-center text-muted-foreground">
-                    <p>Converted Tailwind classes will appear here</p>
+                  <div className="h-full min-h-[200px] flex items-center justify-center text-muted-foreground text-center px-4">
+                    <p>Converted Tailwind classes will appear here, or type CSS to see a live preview.</p>
                   </div>
                 )}
               </div>

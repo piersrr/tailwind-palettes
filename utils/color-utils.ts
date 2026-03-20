@@ -120,6 +120,16 @@ export function formatOklch(oklch: { l: number, c: number, h: number }): string 
   return `oklch(${oklch.l.toFixed(3)} ${oklch.c.toFixed(3)} ${oklch.h.toFixed(3)})`;
 }
 
+/** OKLCH string for CSS / arbitrary Tailwind values (spaces → underscores in arbitrary). */
+export function colorToOklchCss(color: string): string {
+  const o = stringToOklch(color);
+  return formatOklch(o);
+}
+
+export function oklchToTailwindArbitrary(oklchCss: string): string {
+  return oklchCss.replace(/\s+/g, "_");
+}
+
 /**
  * Parse OKLCH string into components
  */

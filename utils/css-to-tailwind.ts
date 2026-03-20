@@ -923,3 +923,26 @@ export function preprocessCssInput(input: string): string {
   // If no special format detected, return as is
   return input;
 }
+
+/**
+ * Parses declaration blocks (same shape as convertCssToTailwind) into a React style object
+ * for live preview. Unknown properties are passed through as-is; invalid keys are skipped.
+ */
+export function cssDeclarationsToReactStyle(input: string): Record<string, string> {
+  const declarations = preprocessCssInput(input).replace(/^\s*\{|\}\s*$/g, "");
+  const out: Record<string, string> = {};
+
+  for (const segment of declarations.split(";")) {
+    const line = segment.trim();
+    if (!line) continue;
+    const colonIdx = line.indexOf(":");
+    if (colonIdx === -1) continue;
+    const rawProp = line.slice(0, colonIdx).trim();
+    const rawValue = line.slice(colonIdx + 1).trim();
+    if (!rawProp || !rawValue) continue;
+    const camel = rawProp.replace(/-([a-z])/gi, (_, c: string) => c.toUpperCase());
+    out[camel] = rawValue;
+  }
+
+  return out;
+}
