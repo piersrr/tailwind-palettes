@@ -313,16 +313,23 @@ export function adjustColor(color: string, adjustment: ColorAdjustment): ColorIn
   };
 }
 
+export type ThemeOutputFormat = "hex" | "oklch";
+
 /**
  * Generate a Tailwind v4 theme configuration string using @theme
  */
-export function generateTailwindTheme(colorName: string, palette: ColorInfo[]): string {
+export function generateTailwindTheme(
+  colorName: string,
+  palette: ColorInfo[],
+  outputFormat: ThemeOutputFormat = "hex",
+): string {
   let themeCode = `@theme {\n`;
-  
-  palette.forEach(color => {
-    themeCode += `  --color-${colorName}-${color.index}: ${color.hex};\n`;
+
+  palette.forEach((color) => {
+    const value = outputFormat === "oklch" ? color.oklch : color.hex;
+    themeCode += `  --color-${colorName}-${color.index}: ${value};\n`;
   });
-  
+
   themeCode += `}`;
   return themeCode;
 }
@@ -330,13 +337,18 @@ export function generateTailwindTheme(colorName: string, palette: ColorInfo[]): 
 /**
  * Generate CSS variables for a theme
  */
-export function generateCssVariables(colorName: string, palette: ColorInfo[]): string {
-  let cssVars = '';
-  
-  palette.forEach(color => {
-    cssVars += `  --${colorName}-${color.index}: ${color.hex};\n`;
+export function generateCssVariables(
+  colorName: string,
+  palette: ColorInfo[],
+  outputFormat: ThemeOutputFormat = "hex",
+): string {
+  let cssVars = "";
+
+  palette.forEach((color) => {
+    const value = outputFormat === "oklch" ? color.oklch : color.hex;
+    cssVars += `  --${colorName}-${color.index}: ${value};\n`;
   });
-  
+
   return cssVars;
 }
 

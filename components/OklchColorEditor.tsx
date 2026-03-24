@@ -1,8 +1,14 @@
-import { useMemo } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
+import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Slider } from "./ui/slider";
 import { formatOklch } from "../utils/color-utils";
-import { oklchToSrgbHex, srgbToOklch, type OklchTriplet } from "../utils/oklch-culori";
+import {
+  oklchToSrgbHex,
+  srgbToOklch,
+  tryCssToOklch,
+  type OklchTriplet,
+} from "../utils/oklch-culori";
 
 export type OklchColor = OklchTriplet;
 
@@ -26,6 +32,24 @@ export function OklchColorEditor({
   value: OklchColor;
   onChange: (next: OklchColor) => void;
 }) {
+  const cssInputId = useId();
+  const [draft, setDraft] = useState(() => formatOklch(value));
+
+  useEffect(() => {
+    setDraft(formatOklch(value));
+  }, [value.l, value.c, value.h]);
+
+  const commitDraft = () => {
+    const parsed = tryCssToOklch(draft);
+    if (parsed) {
+      const next = clampOklch(parsed);
+      onChange(next);
+      setDraft(formatOklch(next));
+    } else {
+      setDraft(formatOklch(value));
+    }
+  };
+
   const css = formatOklch(value);
   const hexForNativePicker = oklchToSrgbHex(value.l, value.c, value.h);
 
@@ -75,6 +99,29 @@ export function OklchColorEditor({
       <p className="text-xs text-muted-foreground -mt-1 w-full">
         Tile = OKLCH. Picker is sRGB (culori) so it matches the tile after you choose.
       </p>
+
+      <div className="space-y-1.5">
+        <Label htmlFor={cssInputId} className="text-sm text-muted-foreground">
+          CSS color (paste)
+        </Label>
+        <Input
+          id={cssInputId}
+          type="text"
+          spellCheck={false}
+          className="font-mono text-sm"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commitDraft}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              (e.target as HTMLInputElement).blur();
+            }
+          }}
+          placeholder="oklch(0.55 0.18 250) or #3b82f6"
+          aria-label={`${label} — CSS color string`}
+        />
+      </div>
 
       <div className="w-full min-w-0 space-y-3 pt-0.5">
         <div className="space-y-1.5">

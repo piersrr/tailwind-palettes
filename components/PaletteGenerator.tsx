@@ -20,7 +20,7 @@ import {
   ColorInfo 
 } from "../utils/color-utils";
 import { cssColorToHex } from "../utils/oklch-culori";
-import { CheckIcon, CircleHelpIcon, Loader2Icon, PaletteIcon, InfoIcon } from "lucide-react";
+import { CheckIcon, CircleHelpIcon, Loader2Icon, PaletteIcon } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -38,7 +38,7 @@ export function PaletteGenerator() {
   const [showBentoPreview, setShowBentoPreview] = useState(true);
   const [basePosition, setBasePosition] = useState<number>(0);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [inputColorSpace, setInputColorSpace] = useState<"hex" | "oklch">("hex");
+  const [inputColorSpace, setInputColorSpace] = useState<"hex" | "oklch">("oklch");
 
   const handleInputColorSpaceChange = (value: string) => {
     const next = value as "hex" | "oklch";
@@ -80,9 +80,9 @@ export function PaletteGenerator() {
     let textToCopy = "";
     
     if (activeTab === "tailwind") {
-      textToCopy = generateTailwindTheme(colorName, palette);
+      textToCopy = generateTailwindTheme(colorName, palette, inputColorSpace);
     } else if (activeTab === "css") {
-      textToCopy = generateCssVariables(colorName, palette);
+      textToCopy = generateCssVariables(colorName, palette, inputColorSpace);
     }
     
     navigator.clipboard.writeText(textToCopy);
@@ -192,18 +192,6 @@ export function PaletteGenerator() {
                 <label htmlFor="use-two-colors">Use two colors</label>
               </div>
               
-              {!useTwoColors && positionInfo && (
-                <div className="bg-muted p-3 rounded-md text-sm flex items-start gap-2">
-                  <InfoIcon className="h-5 w-5 mt-0.5 flex-shrink-0 text-muted-foreground" />
-                  <div>
-                    <p>Your base color is positioned at shade <strong>{positionInfo.shade}</strong> in the palette.</p>
-                    <p className="text-muted-foreground mt-1">
-                      The dashboard card in the preview below will always use this exact color as its primary background.
-                    </p>
-                  </div>
-                </div>
-              )}
-              
               {useTwoColors && inputColorSpace === "hex" && (
                 <ColorPicker 
                   label="Second Color"
@@ -241,7 +229,7 @@ export function PaletteGenerator() {
                 <TabsContent value="tailwind" className="space-y-4">
                   <div className="relative">
                     <pre className="p-4 rounded bg-muted overflow-auto max-h-64 text-xs border border-gray-200">
-                      {generateTailwindTheme(colorName, palette)}
+                      {generateTailwindTheme(colorName, palette, inputColorSpace)}
                     </pre>
                     <Button 
                       variant="secondary" 
@@ -270,7 +258,7 @@ export function PaletteGenerator() {
                 <TabsContent value="css" className="space-y-4">
                   <div className="relative">
                     <pre className="p-4 rounded bg-muted overflow-auto max-h-64 text-xs">
-                      {`:root {\n${generateCssVariables(colorName, palette)}}`}
+                      {`:root {\n${generateCssVariables(colorName, palette, inputColorSpace)}}`}
                     </pre>
                     <Button 
                       variant="secondary" 
@@ -290,18 +278,36 @@ export function PaletteGenerator() {
           </div>
           
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-muted-foreground text-sm">
-              <PaletteIcon className="h-4 w-4" />
-              <span>Click on any color to customize it with the color picker</span>
+            <div className="flex flex-wrap gap-x-2 gap-y-1 text-muted-foreground text-sm">
+              <span className="inline-flex items-center gap-2">
+                <PaletteIcon className="h-4 w-4 shrink-0" aria-hidden />
+                <span>Click on any color to customize it with the color picker.</span>
+              </span>
+              {!useTwoColors && positionInfo ? (
+                <span className="text-muted-foreground">
+                  Base color maps to shade{" "}
+                  <span className="font-medium text-foreground tabular-nums">
+                    {positionInfo.shade}
+                  </span>
+                  .
+                </span>
+              ) : null}
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-10 gap-3">
-              {palette.map((color) => (
+              {palette.map((color) => {
+                const baseShade =
+                  !useTwoColors && basePosition < PALETTE_SHADE_INDICES.length
+                    ? PALETTE_SHADE_INDICES[basePosition]
+                    : null;
+                return (
                 <ColorSwatch 
                   key={color.index} 
                   color={color}
                   onColorChange={handleColorChange}
+                  isMatchedBase={baseShade !== null && color.index === baseShade}
                 />
-              ))}
+                );
+              })}
             </div>
           </div>
         </CardContent>

@@ -128,7 +128,7 @@ export function BentoLayout({ colorName, palette, basePosition }: BentoLayoutPro
         <Card className="md:col-span-2 md:row-span-2 group overflow-hidden rounded-none border-0 shadow-none border-r border-b border-border/20" style={cardStyles.primary}>
           <CardHeader>
             <div className="flex justify-between items-start">
-              <CardTitle className="text-xl">Dashboard Overview</CardTitle>
+              <CardTitle className="text-2xl font-semibold tracking-tight">Dashboard Overview</CardTitle>
               <Badge 
                 variant="outline" 
                 className="backdrop-blur-sm border-white/10"
@@ -227,7 +227,7 @@ export function BentoLayout({ colorName, palette, basePosition }: BentoLayoutPro
         {/* Status card */}
         <Card className="group rounded-none border-0 border-r border-b border-border/20 shadow-none" style={cardStyles.accent}>
           <CardHeader>
-            <CardTitle className="text-base">System Status</CardTitle>
+            <CardTitle className="text-lg font-semibold tracking-tight">System Status</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-3">
@@ -281,7 +281,7 @@ export function BentoLayout({ colorName, palette, basePosition }: BentoLayoutPro
         <Card className="rounded-none border-0 border-r border-b md:border-r lg:border-r border-border/20 shadow-none" style={cardStyles.tertiary}>
           <CardHeader className="pb-2">
             <div className="flex justify-between items-center">
-              <CardTitle className="text-base">Recent Tasks</CardTitle>
+              <CardTitle className="text-lg font-semibold tracking-tight">Recent Tasks</CardTitle>
               <Button variant="ghost" size="icon" className="h-8 w-8">
                 <PlusIcon size={16} />
               </Button>
@@ -310,7 +310,7 @@ export function BentoLayout({ colorName, palette, basePosition }: BentoLayoutPro
         <Card className="md:col-span-2 rounded-none border-0 border-r border-b border-border/20 shadow-none" style={cardStyles.secondary}>
           <CardHeader className="pb-2">
             <div className="flex justify-between items-center">
-              <CardTitle className="text-base">Team Members</CardTitle>
+              <CardTitle className="text-lg font-semibold tracking-tight">Team Members</CardTitle>
               <Button variant="ghost" size="sm" className="gap-1">
                 <UsersIcon size={14} />
                 <span>View All</span>
@@ -345,7 +345,7 @@ export function BentoLayout({ colorName, palette, basePosition }: BentoLayoutPro
         {/* Stats card */}
         <Card className="rounded-none border-0 border-r border-b md:border-r lg:border-r border-border/20 shadow-none" style={cardStyles.neutral}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Weekly Stats</CardTitle>
+            <CardTitle className="text-lg font-semibold tracking-tight">Weekly Stats</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex justify-between items-center">
@@ -385,7 +385,7 @@ export function BentoLayout({ colorName, palette, basePosition }: BentoLayoutPro
         <Card className="rounded-none border-0 border-r border-b md:border-r lg:border-r border-border/20 shadow-none" style={cardStyles.muted}>
           <CardHeader className="pb-2">
             <div className="flex justify-between items-center">
-              <CardTitle className="text-base">Calendar</CardTitle>
+              <CardTitle className="text-lg font-semibold tracking-tight">Calendar</CardTitle>
               <CalendarIcon size={16} />
             </div>
           </CardHeader>
@@ -423,7 +423,7 @@ export function BentoLayout({ colorName, palette, basePosition }: BentoLayoutPro
               className="h-full w-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent p-4 flex flex-col justify-end">
-              <h3 className="text-white text-lg font-medium">Photography Collection</h3>
+              <h3 className="text-white text-lg font-semibold tracking-tight">Photography Collection</h3>
               <p className="text-white/80 text-sm">Beautiful landscape photography</p>
               <div className="flex gap-2 mt-4">
                 <Button size="sm" variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20">
@@ -442,7 +442,7 @@ export function BentoLayout({ colorName, palette, basePosition }: BentoLayoutPro
         <Card className="md:col-span-2 rounded-none border-0 border-r border-b border-border/20 shadow-none" style={cardStyles.neutral}>
           <CardHeader className="pb-2">
             <div className="flex justify-between items-center">
-              <CardTitle className="text-base">Popular Items</CardTitle>
+              <CardTitle className="text-lg font-semibold tracking-tight">Popular Items</CardTitle>
               <Button variant="outline" size="sm">
                 <MoreHorizontalIcon size={14} />
               </Button>
@@ -470,7 +470,7 @@ export function BentoLayout({ colorName, palette, basePosition }: BentoLayoutPro
         {/* Quick actions card */}
         <Card className="rounded-none border-0 border-r border-b md:border-r lg:border-r border-border/20 shadow-none" style={cardStyles.tertiary}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Quick Actions</CardTitle>
+            <CardTitle className="text-lg font-semibold tracking-tight">Quick Actions</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-2">
             <Button variant="outline" className="h-auto flex flex-col py-3 gap-1" style={{ borderColor: `${colors.primaryDark}20` }}>
@@ -496,7 +496,7 @@ export function BentoLayout({ colorName, palette, basePosition }: BentoLayoutPro
         <Card className="rounded-none border-0 border-r border-b border-border/20 shadow-none" style={cardStyles.muted}>
           <CardHeader className="pb-2">
             <div className="flex justify-between items-center">
-              <CardTitle className="text-base">Recent Notifications</CardTitle>
+              <CardTitle className="text-lg font-semibold tracking-tight">Recent Notifications</CardTitle>
               <BellIcon size={16} />
             </div>
           </CardHeader>

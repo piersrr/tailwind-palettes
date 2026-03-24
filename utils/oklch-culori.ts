@@ -4,10 +4,7 @@ const toOklch = converter("oklch");
 
 export type OklchTriplet = { l: number; c: number; h: number };
 
-/** Accurate sRGB (hex, named, etc.) → OKLCH via culori. */
-export function srgbToOklch(input: string): OklchTriplet {
-  const color = parse(input);
-  if (!color) return { l: 0.5, c: 0, h: 0 };
+function parsedColorToOklchTriplet(color: NonNullable<ReturnType<typeof parse>>): OklchTriplet {
   const o = toOklch(color);
   const l = o.l ?? 0;
   const c = o.c ?? 0;
@@ -22,6 +19,18 @@ export function srgbToOklch(input: string): OklchTriplet {
     c: chroma,
     h,
   };
+}
+
+/** CSS color string culori understands → OKLCH, or null if not parseable. */
+export function tryCssToOklch(input: string): OklchTriplet | null {
+  const color = parse(input.trim());
+  if (!color) return null;
+  return parsedColorToOklchTriplet(color);
+}
+
+/** Accurate sRGB (hex, named, etc.) → OKLCH via culori. */
+export function srgbToOklch(input: string): OklchTriplet {
+  return tryCssToOklch(input) ?? { l: 0.5, c: 0, h: 0 };
 }
 
 /** OKLCH → closest sRGB hex for `<input type="color">`. */

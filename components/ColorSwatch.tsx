@@ -1,16 +1,18 @@
-
 import { useState, useRef } from "react";
 import { Button } from "./ui/button";
 import { Tooltip, TooltipTrigger, TooltipContent } from "./ui/tooltip";
+import { cn } from "./ui/utils";
 import { ColorInfo, stringToOklch } from "../utils/color-utils";
 import { CheckIcon, ClipboardCopyIcon, PaletteIcon } from "lucide-react";
 
 interface ColorSwatchProps {
   color: ColorInfo;
   onColorChange: (colorIndex: number, newColor: ColorInfo) => void;
+  /** Highlights the palette stop that matches the auto-placed base color (single-color mode). */
+  isMatchedBase?: boolean;
 }
 
-export function ColorSwatch({ color, onColorChange }: ColorSwatchProps) {
+export function ColorSwatch({ color, onColorChange, isMatchedBase }: ColorSwatchProps) {
   const [copiedHex, setCopiedHex] = useState(false);
   const [copiedOklch, setCopiedOklch] = useState(false);
   const colorPickerRef = useRef<HTMLInputElement>(null);
@@ -47,7 +49,19 @@ export function ColorSwatch({ color, onColorChange }: ColorSwatchProps) {
   };
   
   return (
-    <div className="border rounded-lg overflow-hidden">
+    <div
+      className={cn(
+        "rounded-lg overflow-hidden",
+        isMatchedBase
+          ? "border-[2px] border-neutral-700 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] dark:border-neutral-100 dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
+          : "border border-border",
+      )}
+      aria-label={
+        isMatchedBase
+          ? `Shade ${color.index}, matches your base color input`
+          : undefined
+      }
+    >
       <div 
         className="h-20 cursor-pointer group relative"
         style={{ backgroundColor: color.hex }}
