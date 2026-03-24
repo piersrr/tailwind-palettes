@@ -1,5 +1,4 @@
 import { useState, useRef } from "react";
-import { Button } from "./ui/button";
 import { Tooltip, TooltipTrigger, TooltipContent } from "./ui/tooltip";
 import { cn } from "./ui/utils";
 import {
@@ -9,7 +8,7 @@ import {
   stringToOklch,
   wcagNormalTextLevel,
 } from "../utils/color-utils";
-import { CheckIcon, ClipboardCopyIcon, PaletteIcon } from "lucide-react";
+import { PaletteIcon } from "lucide-react";
 
 interface ColorSwatchProps {
   color: ColorInfo;
@@ -183,12 +182,19 @@ export function ColorSwatch({
         </div>
         
         <div className="flex flex-col gap-1 text-xs">
-          <div 
-            className="font-mono cursor-pointer hover:text-primary transition-colors"
-            onClick={() => handleCopyHex(color.hex)}
-          >
-            {color.hex}
-          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className="font-mono cursor-pointer hover:text-primary transition-colors"
+                onClick={() => handleCopyHex(color.hex)}
+              >
+                {color.hex}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              {copiedHex ? "Copied!" : color.hex}
+            </TooltipContent>
+          </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
               <div 
