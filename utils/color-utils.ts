@@ -31,6 +31,50 @@ export function hexToRgb(hex: string): { r: number; g: number; b: number } | nul
 }
 
 /**
+ * WCAG 2.x relative luminance for sRGB hex (linearized, 0–1).
+ */
+export function relativeLuminance(hex: string): number | null {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return null;
+  const linear = (channel: number) => {
+    const c = channel / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  };
+  const r = linear(rgb.r);
+  const g = linear(rgb.g);
+  const b = linear(rgb.b);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/**
+ * WCAG contrast ratio between two sRGB hex colors (1–21).
+ */
+export function contrastRatio(fgHex: string, bgHex: string): number | null {
+  const L1 = relativeLuminance(fgHex);
+  const L2 = relativeLuminance(bgHex);
+  if (L1 === null || L2 === null) return null;
+  const lighter = Math.max(L1, L2);
+  const darker = Math.min(L1, L2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+/** Black or white — whichever yields higher contrast on the background. */
+export function preferredContrastingTextColor(backgroundHex: string): "#ffffff" | "#000000" {
+  const onWhite = contrastRatio("#ffffff", backgroundHex) ?? 0;
+  const onBlack = contrastRatio("#000000", backgroundHex) ?? 0;
+  return onWhite >= onBlack ? "#ffffff" : "#000000";
+}
+
+/** WCAG 2.1 level for normal-sized text (AA 4.5:1, AAA 7:1). */
+export type WcagNormalTextLevel = "AAA" | "AA" | "fail";
+
+export function wcagNormalTextLevel(ratio: number): WcagNormalTextLevel {
+  if (ratio >= 7) return "AAA";
+  if (ratio >= 4.5) return "AA";
+  return "fail";
+}
+
+/**
  * Convert RGB to hex
  */
 export function rgbToHex(r: number, g: number, b: number): string {

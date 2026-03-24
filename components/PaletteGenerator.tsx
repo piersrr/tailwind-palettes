@@ -36,6 +36,7 @@ export function PaletteGenerator() {
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState("tailwind");
   const [showBentoPreview, setShowBentoPreview] = useState(true);
+  const [showContrastPreview, setShowContrastPreview] = useState(false);
   const [basePosition, setBasePosition] = useState<number>(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [inputColorSpace, setInputColorSpace] = useState<"hex" | "oklch">("oklch");
@@ -293,7 +294,7 @@ export function PaletteGenerator() {
                 </span>
               ) : null}
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-10 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-10 gap-2">
               {palette.map((color) => {
                 const baseShade =
                   !useTwoColors && basePosition < PALETTE_SHADE_INDICES.length
@@ -305,6 +306,7 @@ export function PaletteGenerator() {
                   color={color}
                   onColorChange={handleColorChange}
                   isMatchedBase={baseShade !== null && color.index === baseShade}
+                  contrastPreview={showContrastPreview}
                 />
                 );
               })}
@@ -314,15 +316,26 @@ export function PaletteGenerator() {
         
         <CardFooter className="flex justify-between text-sm text-muted-foreground">
           <p>Generated palette for {colorName}</p>
-          <div className="flex items-center gap-2">
-            <span>Preview:</span>
-            <input 
-              type="checkbox" 
-              id="show-bento" 
-              checked={showBentoPreview}
-              onChange={(e) => setShowBentoPreview(e.target.checked)}
-            />
-            <label htmlFor="show-bento">Show</label>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <span className="shrink-0">Preview:</span>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="show-bento"
+                checked={showBentoPreview}
+                onChange={(e) => setShowBentoPreview(e.target.checked)}
+              />
+              <label htmlFor="show-bento">Bento layout</label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="show-contrast"
+                checked={showContrastPreview}
+                onChange={(e) => setShowContrastPreview(e.target.checked)}
+              />
+              <label htmlFor="show-contrast">Contrast</label>
+            </div>
           </div>
         </CardFooter>
       </Card>
