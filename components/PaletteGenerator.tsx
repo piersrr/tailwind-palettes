@@ -276,7 +276,7 @@ export function PaletteGenerator() {
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-2xl bg-ink text-ink-foreground shadow-[0_24px_60px_-28px_rgba(40,28,16,0.55)]">
+        <div className="overflow-hidden rounded-2xl bg-ink text-ink-foreground shadow-[0_24px_60px_-28px_rgba(0,0,0,0.45)]">
           <div className="flex items-center justify-between gap-3 px-5 pt-5">
             <Tabs
               value={activeTab}
