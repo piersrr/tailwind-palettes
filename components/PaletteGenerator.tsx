@@ -107,7 +107,7 @@ export function PaletteGenerator() {
   
   return (
     <div className="space-y-10">
-      <Card className="w-full max-w-7xl mx-auto pt-6 border-none p-0">        
+      <Card className="w-full pt-6 border-none p-0">        
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-4">
@@ -341,7 +341,7 @@ export function PaletteGenerator() {
       </Card>
       
       {showBentoPreview && palette.length > 0 && (
-        <div className="w-full max-w-7xl mx-auto border-t pt-8">
+        <div className="w-full border-t pt-8">
           <BentoLayout colorName={colorName} palette={palette} basePosition={useTwoColors ? PALETTE_INDEX_500 : basePosition} />
         </div>
       )}

@@ -17,8 +17,8 @@ export default function App() {
       <main
         className={
           activePage === "css-to-tailwind"
-            ? "max-w-7xl mx-auto px-4 md:px-8 py-6 md:py-10 min-h-[calc(100dvh-10rem)] flex flex-col justify-center"
-            : "max-w-7xl mx-auto p-4 md:p-8"
+            ? "w-full px-4 md:px-8 py-6 md:py-10 min-h-[calc(100dvh-10rem)] flex flex-col justify-center"
+            : "w-full p-4 md:p-8"
         }
       >
         {activePage === "palette" && <PaletteGenerator />}
@@ -26,7 +26,7 @@ export default function App() {
         {activePage === "oklch-gradient" && <OklchGradientGenerator />}
       </main>
       
-      <footer className="max-w-7xl mx-auto px-4 md:px-8 mt-8 pt-4 border-t text-sm text-muted-foreground">
+      <footer className="w-full px-4 md:px-8 mt-8 pt-4 border-t text-sm text-muted-foreground">
       
       </footer>
     </div>

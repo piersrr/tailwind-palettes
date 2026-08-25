@@ -99,7 +99,7 @@ opacity: 0.8;`
   ];
   
   return (
-    <Card className="w-full max-w-5xl mx-auto shadow-sm">
+    <Card className="w-full shadow-sm">
       <CardHeader>
         <CardTitle>CSS to Tailwind Converter</CardTitle>
         <CardDescription>

@@ -79,7 +79,7 @@ export function ColorSwatch({
       }
     >
       <div 
-        className="h-20 cursor-pointer group relative"
+        className="h-28 cursor-pointer group relative"
         style={{ backgroundColor: color.hex }}
         onClick={handleColorClick}
       >

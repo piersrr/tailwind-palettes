@@ -184,7 +184,7 @@ export function OklchGradientGenerator() {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto w-full">
+    <div className="space-y-6 w-full">
       <Card className="border-none shadow-none bg-transparent">
         <CardContent className="space-y-6 p-0">
           <div>
