@@ -1,12 +1,12 @@
 import { useState, useRef, useMemo } from "react";
 import { Button } from "./ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "./ui/card";
 import { Textarea } from "./ui/textarea";
 import {
   convertCssToTailwind,
   preprocessCssInput,
   cssDeclarationsToReactStyle,
 } from "../utils/css-to-tailwind";
+import { PageIntro } from "./PageIntro";
 import { CheckIcon, ClipboardCopyIcon, ArrowRightIcon, TrashIcon } from "lucide-react";
 
 export function CssToTailwind() {
@@ -14,7 +14,7 @@ export function CssToTailwind() {
   const [tailwindOutput, setTailwindOutput] = useState("");
   const [copied, setCopied] = useState(false);
   const outputRef = useRef<HTMLDivElement>(null);
-  
+
   const previewStyle = useMemo(
     () => cssDeclarationsToReactStyle(cssInput),
     [cssInput],
@@ -24,18 +24,17 @@ export function CssToTailwind() {
     const preprocessed = preprocessCssInput(cssInput);
     const result = convertCssToTailwind(preprocessed);
     setTailwindOutput(result);
-    
-    // Scroll to output if needed
+
     if (outputRef.current) {
-      outputRef.current.scrollIntoView({ behavior: 'smooth' });
+      outputRef.current.scrollIntoView({ behavior: "smooth" });
     }
   };
-  
+
   const handleClear = () => {
     setCssInput("");
     setTailwindOutput("");
   };
-  
+
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(tailwindOutput);
@@ -45,8 +44,7 @@ export function CssToTailwind() {
       setCopied(false);
     }
   };
-  
-  // Example CSS snippets to help users get started
+
   const examples = [
     {
       name: "Button",
@@ -57,7 +55,7 @@ color: white;
 border-radius: 4px;
 font-weight: 500;
 cursor: pointer;
-transition: background-color 150ms;`
+transition: background-color 150ms;`,
     },
     {
       name: "Card",
@@ -66,18 +64,18 @@ flex-direction: column;
 background: white;
 border-radius: 8px;
 padding: 16px;
-box-shadow: 0 1px 3px rgba(0,0,0,0.12);`
+box-shadow: 0 1px 3px rgba(0,0,0,0.12);`,
     },
     {
-      name: "Flex Container",
+      name: "Flex",
       css: `display: flex;
 justify-content: space-between;
 align-items: center;
 gap: 16px;
-padding: 12px;`
+padding: 12px;`,
     },
     {
-      name: "Gradient Button",
+      name: "Gradient",
       css: `display: inline-block;
 padding: 10px 20px;
 background: linear-gradient(to right, #6366f1, #8b5cf6);
@@ -85,186 +83,153 @@ color: white;
 border-radius: 4px;
 font-weight: 500;
 text-align: center;
-box-shadow: 0 4px 6px rgba(0,0,0,0.1);`
+box-shadow: 0 4px 6px rgba(0,0,0,0.1);`,
     },
     {
-      name: "Positioning",
+      name: "Pin",
       css: `position: absolute;
 top: 0;
 right: 0;
 z-index: 10;
 margin: 16px;
-opacity: 0.8;`
-    }
+opacity: 0.8;`,
+    },
   ];
-  
+
   return (
-    <Card className="w-full shadow-sm">
-      <CardHeader>
-        <CardTitle>CSS to Tailwind Converter</CardTitle>
-        <CardDescription>
-          Paste declarations, a rule block, or HTML with a <code className="text-xs">style</code>{" "}
-          attribute—then copy the utility string for your project.
-        </CardDescription>
-      </CardHeader>
-      
-      <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex justify-between items-center flex-wrap gap-2">
-                <label htmlFor="css-input" className="text-sm font-medium">
-                  CSS Properties
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {examples.map((example) => (
-                    <Button 
-                      key={example.name}
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => setCssInput(example.css)}
-                    >
-                      {example.name}
-                    </Button>
-                  ))}
+    <div className="space-y-10">
+      <PageIntro kicker="Convert" title="Paste CSS. Leave with utilities.">
+        Declarations, a rule block, or an inline style attribute. ⌘/Ctrl + Enter
+        converts.
+      </PageIntro>
+
+      <div className="flex flex-wrap gap-2">
+        {examples.map((example) => (
+          <button
+            key={example.name}
+            type="button"
+            onClick={() => setCssInput(example.css)}
+            className="rounded-full border border-border bg-card/70 px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-foreground/25 hover:text-foreground"
+          >
+            {example.name}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
+        <div className="space-y-3">
+          <label htmlFor="css-input" className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+            CSS
+          </label>
+          <Textarea
+            id="css-input"
+            placeholder={`display: flex;\npadding: 1rem;\nbackground: #f8f9fa;`}
+            value={cssInput}
+            onChange={(e) => setCssInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                if (cssInput.trim()) handleConvert();
+              }
+            }}
+            className="min-h-[280px] rounded-2xl border-border/80 bg-card font-mono text-[13px]"
+          />
+          <div className="flex gap-2">
+            <Button
+              onClick={handleConvert}
+              disabled={!cssInput.trim()}
+              className="flex-1"
+            >
+              <ArrowRightIcon className="h-4 w-4" />
+              Convert
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleClear}
+              disabled={!cssInput.trim() && !tailwindOutput.trim()}
+              aria-label="Clear"
+            >
+              <TrashIcon className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        <div className="space-y-3" ref={outputRef}>
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+              Tailwind
+            </p>
+            {tailwindOutput ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={copyToClipboard}
+                className="h-8 px-2"
+              >
+                {copied ? (
+                  <CheckIcon className="h-4 w-4" />
+                ) : (
+                  <ClipboardCopyIcon className="h-4 w-4" />
+                )}
+                {copied ? "Copied" : "Copy"}
+              </Button>
+            ) : null}
+          </div>
+
+          <div className="min-h-[280px] overflow-auto rounded-2xl bg-ink p-5 text-ink-foreground">
+            {tailwindOutput ? (
+              <div>
+                <code className="font-mono text-[13px] leading-relaxed whitespace-pre-wrap break-all text-ink-foreground/90">
+                  {tailwindOutput}
+                </code>
+                <div className="mt-6 grid grid-cols-1 gap-4 border-t border-white/10 pt-5 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <p className="text-[10px] uppercase tracking-[0.16em] text-ink-muted">
+                      CSS
+                    </p>
+                    <div className="flex min-h-[88px] items-center justify-center rounded-xl bg-white/5 p-4">
+                      <div style={previewStyle} className="text-sm">
+                        Sample
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-[10px] uppercase tracking-[0.16em] text-ink-muted">
+                      Utilities
+                    </p>
+                    <div className="flex min-h-[88px] items-center justify-center rounded-xl bg-white/5 p-4">
+                      <div className={`text-sm ${tailwindOutput}`}>Sample</div>
+                    </div>
+                  </div>
+                </div>
+                <p className="mt-4 text-[11px] leading-relaxed text-ink-muted">
+                  This app only ships utilities found in source. Dynamic class
+                  strings may look incomplete here.
+                </p>
+              </div>
+            ) : cssInput.trim() ? (
+              <div className="space-y-4">
+                <p className="text-sm text-ink-muted">Convert to see utilities.</p>
+                <div className="flex min-h-[88px] items-center justify-center rounded-xl bg-white/5 p-4">
+                  <div style={previewStyle} className="text-sm text-ink-foreground">
+                    Sample
+                  </div>
                 </div>
               </div>
-              <Textarea
-                id="css-input"
-                placeholder={`Enter CSS properties:
-display: flex;
-flex-direction: column;
-align-items: center;
-padding: 1rem;
-background: #f8f9fa;
-border-radius: 8px;`}
-                value={cssInput}
-                onChange={(e) => setCssInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                    e.preventDefault();
-                    if (cssInput.trim()) handleConvert();
-                  }
-                }}
-                className="min-h-[240px] font-mono text-sm"
-              />
-              <p className="text-xs text-muted-foreground">
-                Paste CSS properties, inline style attributes, or a CSS rule block. The converter
-                supports common CSS properties and will automatically map them to Tailwind classes.{" "}
-                <span className="text-foreground/80">⌘/Ctrl + Enter</span> converts.
-              </p>
-            </div>
-            
-            <div className="flex gap-2">
-              <Button 
-                onClick={handleConvert}
-                disabled={!cssInput.trim()}
-                className="flex-1"
-              >
-                <ArrowRightIcon className="mr-2 h-4 w-4" />
-                Convert to Tailwind
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={handleClear}
-                disabled={!cssInput.trim() && !tailwindOutput.trim()}
-              >
-                <TrashIcon className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-          
-          <div className="space-y-4" ref={outputRef}>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <label htmlFor="tailwind-output" className="text-sm font-medium">
-                  Tailwind Classes
-                </label>
-                {tailwindOutput && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={copyToClipboard}
-                    className="h-8 px-2"
-                  >
-                    {copied ? <CheckIcon className="h-4 w-4 mr-1" /> : <ClipboardCopyIcon className="h-4 w-4 mr-1" />}
-                    {copied ? "Copied!" : "Copy"}
-                  </Button>
-                )}
+            ) : (
+              <div className="flex min-h-[240px] items-center justify-center text-center text-sm text-ink-muted">
+                Output lands here.
               </div>
-              <div className="border rounded-md bg-muted p-4 min-h-[240px] overflow-auto">
-                {tailwindOutput ? (
-                  <div>
-                    <code className="text-sm font-mono whitespace-pre-wrap break-all">
-                      {tailwindOutput}
-                    </code>
+            )}
+          </div>
+        </div>
+      </div>
 
-                    <div className="mt-4 pt-4 border-t space-y-3">
-                      <p className="text-sm font-medium">Preview</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <p className="text-xs text-muted-foreground">Your CSS (inline)</p>
-                          <div className="border border-dashed border-border rounded-md p-4 flex justify-center items-center min-h-[88px] bg-background/50">
-                            <div style={previewStyle} className="text-sm">
-                              Sample element
-                            </div>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <p className="text-xs text-muted-foreground">Tailwind utilities</p>
-                          <div className="border border-dashed border-border rounded-md p-4 flex justify-center items-center min-h-[88px] bg-background/50">
-                            <div className={`text-sm ${tailwindOutput}`}>Sample element</div>
-                          </div>
-                          <p className="text-xs text-muted-foreground leading-relaxed">
-                            This app only ships utilities Tailwind finds in source files—dynamic
-                            class strings may look partial here; your project will include them once
-                            you paste the classes into components.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : cssInput.trim() ? (
-                  <div className="space-y-3 text-muted-foreground">
-                    <p className="text-sm">Run convert to see Tailwind utilities.</p>
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium text-foreground">CSS preview</p>
-                      <div className="border border-dashed border-border rounded-md p-4 flex justify-center items-center min-h-[88px] bg-background/50">
-                        <div style={previewStyle} className="text-sm text-foreground">
-                          Sample element
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="h-full min-h-[200px] flex items-center justify-center text-muted-foreground text-center px-4">
-                    <p>Converted Tailwind classes will appear here, or type CSS to see a live preview.</p>
-                  </div>
-                )}
-              </div>
-              {tailwindOutput && (
-                <p className="text-xs text-muted-foreground">
-                  The converter tries to use standard Tailwind classes where possible and falls back to arbitrary values [property:value] for unsupported or complex properties.
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      </CardContent>
-      
-      <CardFooter className="flex flex-col gap-2 text-sm text-muted-foreground">
-        <p>Supported property types include:</p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 w-full">
-          <div>• Layout (display, position)</div>
-          <div>• Spacing (margin, padding)</div>
-          <div>• Sizing (width, height)</div>
-          <div>• Typography (font, text)</div>
-          <div>• Colors & Backgrounds</div>
-          <div>• Borders & Shadows</div>
-          <div>• Flexbox & Grid</div>
-          <div>• Effects & Transitions</div>
-        </div>
-      </CardFooter>
-    </Card>
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        Layout, spacing, type, color, border, shadow, flex, grid, and most
+        effects. Unknown values become arbitrary{" "}
+        <span className="font-mono">[property:value]</span>.
+      </p>
+    </div>
   );
 }

@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
-import { Card, CardContent } from "./ui/card";
 import { Label } from "./ui/label";
 import { Button } from "./ui/button";
 import { OklchColorEditor, clampOklch, type OklchColor } from "./OklchColorEditor";
+import { PageIntro } from "./PageIntro";
 import { formatOklch, oklchToTailwindArbitrary } from "../utils/color-utils";
 import { srgbToOklch } from "../utils/oklch-culori";
 import { CheckIcon } from "lucide-react";
@@ -184,114 +184,96 @@ export function OklchGradientGenerator() {
   };
 
   return (
-    <div className="space-y-6 w-full">
-      <Card className="border-none shadow-none bg-transparent">
-        <CardContent className="space-y-6 p-0">
-          <div>
-            <h2 className="text-xl font-medium">OKLCH gradient</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              Preview matches the copied CSS. The system color picker only speaks sRGB; we convert with culori so your chosen swatch matches the stop and the gradient. If sliders push into wide-gamut OKLCH, the tile can show a color the picker cannot represent exactly.
-            </p>
-          </div>
+    <div className="w-full space-y-10">
+      <PageIntro kicker="Mix" title="Two stops. One gradient.">
+        Preview is the CSS you copy. The native picker is sRGB; we convert with
+        culori so the tile matches. Wide-gamut OKLCH can outrun the picker.
+      </PageIntro>
 
-          <div className="space-y-2">
-            <Label className="text-sm text-muted-foreground">Preview</Label>
-            <div className="rounded-xl border border-border overflow-hidden shadow-sm">
-              <div
-                className="h-28 md:h-32 w-full"
-                style={{ backgroundImage: cssGradient }}
-              />
-            </div>
-          </div>
+      <div className="overflow-hidden rounded-2xl ring-1 ring-foreground/10">
+        <div
+          className="h-40 w-full md:h-52"
+          style={{ backgroundImage: cssGradient }}
+        />
+      </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-8 md:gap-6 md:items-start">
-            <div className="min-w-0 order-1">
-              <OklchColorEditor label="From" value={stop1} onChange={setStop1} />
-            </div>
-            <div className="flex justify-center self-start order-2 py-2 md:py-0 md:px-2 shrink-0">
-              <AngleDial angle={angle} onChange={setAngle} />
-            </div>
-            <div className="min-w-0 order-3">
-              <OklchColorEditor label="To" value={stop2} onChange={setStop2} />
-            </div>
-          </div>
+      <div className="grid grid-cols-1 items-start gap-8 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:gap-6">
+        <div className="min-w-0 order-1">
+          <OklchColorEditor label="From" value={stop1} onChange={setStop1} />
+        </div>
+        <div className="order-2 flex shrink-0 justify-center self-start py-2 md:px-2 md:py-0">
+          <AngleDial angle={angle} onChange={setAngle} />
+        </div>
+        <div className="min-w-0 order-3">
+          <OklchColorEditor label="To" value={stop2} onChange={setStop2} />
+        </div>
+      </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 pt-2">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <Label className="text-muted-foreground">CSS</Label>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => copy("css")}
-                  className="shrink-0"
-                >
-                  {copied === "css" ? (
-                    <CheckIcon className="h-4 w-4" />
-                  ) : (
-                    "Copy"
-                  )}
-                </Button>
-              </div>
-              <pre className="p-3 rounded-lg bg-muted text-xs overflow-x-auto border border-border whitespace-pre-wrap break-all">
-                {cssGradient}
-              </pre>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <Label className="text-muted-foreground">Tailwind class</Label>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => copy("tw")}
-                  className="shrink-0"
-                >
-                  {copied === "tw" ? (
-                    <CheckIcon className="h-4 w-4" />
-                  ) : (
-                    "Copy"
-                  )}
-                </Button>
-              </div>
-              <pre className="p-3 rounded-lg bg-muted text-xs overflow-x-auto border border-border whitespace-pre-wrap break-all">
-                {tailwindClass}
-              </pre>
-            </div>
-          </div>
-
-          <div className="pt-6 border-t border-border space-y-3">
-            <Label className="text-sm text-muted-foreground">
-              Suggested pairings
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <Label className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+              CSS
             </Label>
-            <p className="text-xs text-muted-foreground">
-              Tap to load both stops (Tailwind-style hex → OKLCH via culori).
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {SUGGESTED_PAIRINGS.map((p) => (
-                <Button
-                  key={p.name}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-auto gap-2 py-2 pr-3 pl-2 font-normal"
-                  onClick={() => applyPairing(p.from, p.to)}
-                >
-                  <span
-                    className="size-8 shrink-0 rounded-md border border-border shadow-sm"
-                    style={{
-                      background: `linear-gradient(135deg, ${p.from}, ${p.to})`,
-                    }}
-                    aria-hidden
-                  />
-                  <span className="text-left text-xs sm:text-sm">{p.name}</span>
-                </Button>
-              ))}
-            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => copy("css")}
+              className="h-8 shrink-0"
+            >
+              {copied === "css" ? <CheckIcon className="h-4 w-4" /> : "Copy"}
+            </Button>
           </div>
-        </CardContent>
-      </Card>
+          <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-2xl bg-ink p-4 font-mono text-[12px] leading-relaxed text-ink-foreground/90">
+            {cssGradient}
+          </pre>
+        </div>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <Label className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+              Tailwind
+            </Label>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => copy("tw")}
+              className="h-8 shrink-0"
+            >
+              {copied === "tw" ? <CheckIcon className="h-4 w-4" /> : "Copy"}
+            </Button>
+          </div>
+          <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-2xl bg-ink p-4 font-mono text-[12px] leading-relaxed text-ink-foreground/90">
+            {tailwindClass}
+          </pre>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+          Pairings
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {SUGGESTED_PAIRINGS.map((p) => (
+            <button
+              key={p.name}
+              type="button"
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-card/70 py-1.5 pr-3 pl-1.5 text-left text-sm transition-colors hover:border-foreground/25"
+              onClick={() => applyPairing(p.from, p.to)}
+            >
+              <span
+                className="size-7 shrink-0 rounded-full"
+                style={{
+                  background: `linear-gradient(135deg, ${p.from}, ${p.to})`,
+                }}
+                aria-hidden
+              />
+              <span>{p.name}</span>
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

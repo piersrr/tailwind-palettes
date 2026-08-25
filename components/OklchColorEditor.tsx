@@ -84,9 +84,9 @@ export function OklchColorEditor({
 
   return (
     <div className="w-full min-w-0 space-y-3">
-      <Label className="text-sm font-medium">{label}</Label>
+      <Label className="font-normal text-muted-foreground">{label}</Label>
 
-      <div className="relative w-full overflow-hidden rounded-xl border-2 border-border shadow-sm aspect-[2/1] max-h-[100px] sm:max-h-[110px]">
+      <div className="relative w-full max-h-[100px] aspect-[2/1] overflow-hidden rounded-2xl ring-1 ring-foreground/10 sm:max-h-[110px]">
         <div className="absolute inset-0" style={{ backgroundColor: css }} />
         <input
           type="color"
@@ -96,8 +96,8 @@ export function OklchColorEditor({
           aria-label={`${label} — sRGB color picker`}
         />
       </div>
-      <p className="text-xs text-muted-foreground -mt-1 w-full">
-        Tile = OKLCH. Picker is sRGB (culori) so it matches the tile after you choose.
+      <p className="w-full -mt-1 text-xs text-muted-foreground">
+        Tile is OKLCH. Picker is sRGB.
       </p>
 
       <div className="space-y-1.5">

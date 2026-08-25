@@ -1,15 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "./ui/button";
-import { Card, CardContent, CardFooter } from "./ui/card";
 import { Input } from "./ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { Label } from "./ui/label";
+import { Switch } from "./ui/switch";
+import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 import { ColorPicker } from "./ColorPicker";
 import { ColorSwatch } from "./ColorSwatch";
 import { BentoLayout } from "./BentoLayout";
 import { OklchColorEditor, clampOklch } from "./OklchColorEditor";
-import { 
-  generatePalette, 
-  generatePaletteFromTwoColors, 
+import { PageIntro } from "./PageIntro";
+import {
+  generatePalette,
+  generatePaletteFromTwoColors,
   generateTailwindTheme,
   generateCssVariables,
   determinePalettePosition,
@@ -17,29 +19,32 @@ import {
   stringToOklch,
   PALETTE_SHADE_INDICES,
   PALETTE_INDEX_500,
-  ColorInfo 
+  ColorInfo,
 } from "../utils/color-utils";
 import { cssColorToHex } from "../utils/oklch-culori";
-import { CheckIcon, CircleHelpIcon, Loader2Icon, PaletteIcon } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "./ui/tooltip";
+import { CheckIcon, CircleHelpIcon, Loader2Icon, RefreshCwIcon } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+import { cn } from "./ui/utils";
 
 export function PaletteGenerator() {
   const [baseColor1, setBaseColor1] = useState("#3b82f6");
   const [baseColor2, setBaseColor2] = useState("#8b5cf6");
   const [useTwoColors, setUseTwoColors] = useState(false);
   const [colorName, setColorName] = useState("theme");
+  const [generatedPalette, setGeneratedPalette] = useState<ColorInfo[]>([]);
   const [palette, setPalette] = useState<ColorInfo[]>([]);
+  const [lockedShades, setLockedShades] = useState<Set<number>>(() => new Set());
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState("tailwind");
-  const [showBentoPreview, setShowBentoPreview] = useState(true);
-  const [showContrastPreview, setShowContrastPreview] = useState(false);
+  const [showBentoPreview, setShowBentoPreview] = useState(false);
+  const [showContrastPreview, setShowContrastPreview] = useState(true);
   const [basePosition, setBasePosition] = useState<number>(0);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [inputColorSpace, setInputColorSpace] = useState<"hex" | "oklch">("oklch");
+  const [inputColorSpace, setInputColorSpace] = useState<"hex" | "oklch">(
+    "oklch",
+  );
+  const lockedShadesRef = useRef(lockedShades);
+  lockedShadesRef.current = lockedShades;
 
   const handleInputColorSpaceChange = (value: string) => {
     const next = value as "hex" | "oklch";
@@ -64,286 +69,370 @@ export function PaletteGenerator() {
       }
 
       newPalette.sort((a, b) => a.index - b.index);
-      setPalette(newPalette);
+      const locked = lockedShadesRef.current;
+      setGeneratedPalette(newPalette);
+      setPalette((prev) =>
+        newPalette.map((color) => {
+          if (locked.has(color.index)) {
+            const current = prev.find((stop) => stop.index === color.index);
+            if (current) return { ...current };
+          }
+          return { ...color };
+        }),
+      );
       setIsGenerating(false);
     }, 0);
 
     return () => window.clearTimeout(id);
   }, [baseColor1, baseColor2, useTwoColors]);
-  
+
   const handleColorChange = (colorIndex: number, newColor: ColorInfo) => {
-    setPalette(prev => 
-      prev.map(color => color.index === colorIndex ? newColor : color)
+    setPalette((prev) =>
+      prev.map((color) => (color.index === colorIndex ? newColor : color)),
     );
+    setLockedShades((prev) => {
+      if (prev.has(colorIndex)) return prev;
+      const next = new Set(prev);
+      next.add(colorIndex);
+      return next;
+    });
   };
-  
+
+  const toggleLock = (colorIndex: number) => {
+    const unlocking = lockedShades.has(colorIndex);
+    setLockedShades((prev) => {
+      const next = new Set(prev);
+      if (unlocking) next.delete(colorIndex);
+      else next.add(colorIndex);
+      return next;
+    });
+    if (unlocking) {
+      const generated = generatedPalette.find((stop) => stop.index === colorIndex);
+      if (generated) {
+        setPalette((prev) =>
+          prev.map((color) =>
+            color.index === colorIndex ? { ...generated } : color,
+          ),
+        );
+      }
+    }
+  };
+
   const copyToClipboard = () => {
     let textToCopy = "";
-    
+
     if (activeTab === "tailwind") {
       textToCopy = generateTailwindTheme(colorName, palette, inputColorSpace);
     } else if (activeTab === "css") {
       textToCopy = generateCssVariables(colorName, palette, inputColorSpace);
     }
-    
+
     navigator.clipboard.writeText(textToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Map base position to corresponding color scale
   const getPositionInfo = () => {
     if (useTwoColors) return null;
-    
-    const baseShade = PALETTE_SHADE_INDICES[basePosition];
-    
     return {
       position: basePosition,
-      shade: baseShade
+      shade: PALETTE_SHADE_INDICES[basePosition],
     };
   };
-  
+
   const positionInfo = getPositionInfo();
-  
+  const themeSnippet = generateTailwindTheme(
+    colorName,
+    palette,
+    inputColorSpace,
+  );
+  const cssSnippet = generateCssVariables(colorName, palette, inputColorSpace);
+  const tokenName = colorName || "theme";
+  const hasLockedStops = lockedShades.size > 0;
+  const hasOverrides = palette.some((color) => {
+    const generated = generatedPalette.find((stop) => stop.index === color.index);
+    return generated != null && generated.hex.toLowerCase() !== color.hex.toLowerCase();
+  });
+
+  const resetPalette = () => {
+    setLockedShades(new Set());
+    setPalette(generatedPalette.map((color) => ({ ...color })));
+  };
+
   return (
-    <div className="space-y-10">
-      <Card className="w-full pt-6 border-none p-0">        
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-4">
-              <div className="space-y-3">
-                <div className="text-xl font-medium">Input your base color</div>
-                <Tabs
-                  value={inputColorSpace}
-                  onValueChange={handleInputColorSpaceChange}
-                  className="w-full gap-4"
-                  aria-label="Base color format"
+    <div className="space-y-12">
+      <PageIntro kicker="Scale" title="Turn your color into a scale.">
+        One stop becomes a 50–950 ramp in OKLCH. Click any swatch to retune it,
+        then copy Tailwind v4 tokens or CSS variables.
+      </PageIntro>
+
+      <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+        <div className="space-y-7">
+          <div className="flex flex-wrap items-center gap-3">
+            <Tabs
+              value={inputColorSpace}
+              onValueChange={handleInputColorSpaceChange}
+              aria-label="Base color format"
+            >
+              <TabsList>
+                <TabsTrigger value="oklch">OKLCH</TabsTrigger>
+                <TabsTrigger value="hex">Hex</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label="What is the difference between Hex and OKLCH?"
                 >
-                  <div className="flex flex-wrap items-center gap-3">
-                    <TabsList className="grid h-11 w-full max-w-xs grid-cols-2 p-1">
-                      <TabsTrigger value="hex" className="rounded-full px-4">
-                        Hex
-                      </TabsTrigger>
-                      <TabsTrigger value="oklch" className="rounded-full px-4">
-                        OKLCH
-                      </TabsTrigger>
-                    </TabsList>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                          aria-label="What is the difference between Hex and OKLCH?"
-                        >
-                          <CircleHelpIcon className="h-4 w-4" aria-hidden />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent
-                        showArrow={false}
-                        side="bottom"
-                        align="start"
-                        sideOffset={10}
-                        className="max-w-[min(22rem,calc(100vw-2rem))] border border-neutral-200/80 bg-white px-4 py-3.5 text-left text-neutral-900 shadow-lg rounded-xl text-sm leading-relaxed animate-in fade-in-0 zoom-in-95 duration-200 data-[state=closed]:duration-150"
-                      >
-                        <p className="font-semibold text-neutral-950 mb-2">
-                          Hex vs OKLCH
-                        </p>
-                        <p className="text-neutral-800 mb-2">
-                          <span className="font-medium text-neutral-950">Hex</span>{" "}
-                          is the classic <code className="rounded bg-neutral-100 px-1 py-0.5 text-[0.8125rem] text-neutral-900">#RRGGBB</code>{" "}
-                          format. It is compact and works everywhere, but it does not describe how humans perceive lightness or colorfulness.
-                        </p>
-                        <p className="text-neutral-800">
-                          <span className="font-medium text-neutral-950">OKLCH</span>{" "}
-                          expresses color as perceived lightness (<code className="rounded bg-neutral-100 px-1 py-0.5 text-[0.8125rem]">L</code>), chroma (<code className="rounded bg-neutral-100 px-1 py-0.5 text-[0.8125rem]">C</code>), and hue (<code className="rounded bg-neutral-100 px-1 py-0.5 text-[0.8125rem]">H</code>). Adjusting steps in OKLCH tends to produce smoother, more predictable ramps when building palettes.
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                    {isGenerating ? (
-                      <Loader2Icon
-                        className="h-4 w-4 shrink-0 animate-spin text-muted-foreground"
-                        aria-label="Updating palette"
-                      />
-                    ) : null}
-                  </div>
-                  <TabsContent value="hex" className="mt-0 outline-none">
-                    <ColorPicker 
-                      label="Base Color"
-                      value={baseColor1}
-                      onChange={setBaseColor1}
-                    />
-                  </TabsContent>
-                  <TabsContent value="oklch" className="mt-0 outline-none">
-                    <OklchColorEditor
-                      label="Base Color"
-                      value={clampOklch(stringToOklch(baseColor1))}
-                      onChange={(o) => setBaseColor1(formatOklch(o))}
-                    />
-                  </TabsContent>
-                </Tabs>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <input 
-                  type="checkbox" 
-                  id="use-two-colors" 
-                  checked={useTwoColors}
-                  onChange={(e) => setUseTwoColors(e.target.checked)}
-                />
-                <label htmlFor="use-two-colors">Use two colors</label>
-              </div>
-              
-              {useTwoColors && inputColorSpace === "hex" && (
-                <ColorPicker 
-                  label="Second Color"
-                  value={baseColor2}
-                  onChange={setBaseColor2}
-                />
-              )}
-              {useTwoColors && inputColorSpace === "oklch" && (
-                <OklchColorEditor
-                  label="Second Color"
-                  value={clampOklch(stringToOklch(baseColor2))}
-                  onChange={(o) => setBaseColor2(formatOklch(o))}
-                />
-              )}
-              
-              <div className="space-y-2">
-                <label htmlFor="color-name">Color Name (optional)</label>
-                <Input 
-                  id="color-name"
-                  value={colorName}
-                  onChange={(e) => setColorName(e.target.value)}
-                  placeholder="e.g., primary, brand, accent"
-                />
-              </div>
-            </div>
-            
-            <div className="space-y-4 p-4 rounded-xl border border-gray-200 bg-gray-100">
-              <div className="text-md font-medium">Copy and paste the output to your project</div>
-              <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="grid grid-cols-2">
-                  <TabsTrigger value="tailwind">Tailwind Config</TabsTrigger>
-                  <TabsTrigger value="css">CSS Variables</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="tailwind" className="space-y-4">
-                  <div className="relative">
-                    <pre className="p-4 rounded bg-muted overflow-auto max-h-64 text-xs border border-gray-200">
-                      {generateTailwindTheme(colorName, palette, inputColorSpace)}
-                    </pre>
-                    <Button 
-                      variant="secondary" 
-                      size="sm" 
-                      className="absolute top-2 right-2"
-                      onClick={copyToClipboard}
-                    >
-                      {copied ? <CheckIcon className="h-4 w-4" /> : "Copy"}
-                    </Button>
-                  </div>
-                  <p className="text-sm text-gray-600">
-                    Add this @theme block to your CSS file (Tailwind v4). Then you can use 
-                    the colors as Tailwind utility classes. For example:
-                    <pre className="p-4 rounded bg-muted border border-gray-200 overflow-auto max-h-64 text-sm mt-2 whitespace-pre-wrap break-words">
-                      {`bg-${colorName || 'theme'}-500`}
-                    </pre> 
-                    <p className="text-sm text-gray-600 mt-2">
-                      You can also use the colors as CSS variables in your CSS. For example:
-                      <pre className="p-4 rounded bg-muted border border-gray-200 overflow-auto max-h-64 text-sm mt-2 whitespace-pre-wrap break-words">
-                        {`.class-name { background-color: var(--color-${colorName || 'theme'}-500); }`}
-                      </pre> 
-                    </p>
-                  </p>
-                </TabsContent>
-                
-                <TabsContent value="css" className="space-y-4">
-                  <div className="relative">
-                    <pre className="p-4 rounded bg-muted overflow-auto max-h-64 text-xs">
-                      {`:root {\n${generateCssVariables(colorName, palette, inputColorSpace)}}`}
-                    </pre>
-                    <Button 
-                      variant="secondary" 
-                      size="sm" 
-                      className="absolute top-2 right-2"
-                      onClick={copyToClipboard}
-                    >
-                      {copied ? <CheckIcon className="h-4 w-4" /> : "Copy"}
-                    </Button>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Add these CSS variables to your stylesheets
-                  </p>
-                </TabsContent>
-              </Tabs>
-            </div>
+                  <CircleHelpIcon className="h-4 w-4" aria-hidden />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent
+                showArrow={false}
+                side="bottom"
+                align="start"
+                sideOffset={10}
+                className="max-w-[min(22rem,calc(100vw-2rem))] border border-border bg-card px-4 py-3.5 text-left text-card-foreground shadow-lg rounded-xl text-sm leading-relaxed"
+              >
+                <p className="font-medium mb-2">Hex vs OKLCH</p>
+                <p className="text-muted-foreground mb-2">
+                  <span className="font-medium text-foreground">Hex</span> is{" "}
+                  <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.8rem]">
+                    #RRGGBB
+                  </code>
+                  . Compact, universal, and not how we see lightness.
+                </p>
+                <p className="text-muted-foreground">
+                  <span className="font-medium text-foreground">OKLCH</span> is
+                  lightness, chroma, and hue. Ramps stay smoother when you step
+                  in this space.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+            {isGenerating ? (
+              <Loader2Icon
+                className="h-4 w-4 shrink-0 animate-spin text-muted-foreground"
+                aria-label="Updating palette"
+              />
+            ) : null}
           </div>
-          
+
+          {inputColorSpace === "hex" ? (
+            <ColorPicker
+              label="Base color"
+              value={baseColor1}
+              onChange={setBaseColor1}
+            />
+          ) : (
+            <OklchColorEditor
+              label="Base color"
+              value={clampOklch(stringToOklch(baseColor1))}
+              onChange={(o) => setBaseColor1(formatOklch(o))}
+            />
+          )}
+
+          <div className="flex items-center justify-between gap-4 rounded-xl border border-border/80 bg-card/60 px-4 py-3">
+            <Label htmlFor="use-two-colors" className="font-normal">
+              Blend a second color
+            </Label>
+            <Switch
+              id="use-two-colors"
+              checked={useTwoColors}
+              onCheckedChange={setUseTwoColors}
+            />
+          </div>
+
+          {useTwoColors && inputColorSpace === "hex" && (
+            <ColorPicker
+              label="Second color"
+              value={baseColor2}
+              onChange={setBaseColor2}
+            />
+          )}
+          {useTwoColors && inputColorSpace === "oklch" && (
+            <OklchColorEditor
+              label="Second color"
+              value={clampOklch(stringToOklch(baseColor2))}
+              onChange={(o) => setBaseColor2(formatOklch(o))}
+            />
+          )}
+
           <div className="space-y-2">
-            <div className="flex flex-wrap gap-x-2 gap-y-1 text-muted-foreground text-sm">
-              <span className="inline-flex items-center gap-2">
-                <PaletteIcon className="h-4 w-4 shrink-0" aria-hidden />
-                <span>Click on any color to customize it with the color picker.</span>
-              </span>
-              {!useTwoColors && positionInfo ? (
-                <span className="text-muted-foreground">
-                  Base color maps to shade{" "}
-                  <span className="font-medium text-foreground tabular-nums">
-                    {positionInfo.shade}
-                  </span>
+            <Label
+              htmlFor="color-name"
+              className="text-muted-foreground font-normal"
+            >
+              Token name
+            </Label>
+            <Input
+              id="color-name"
+              value={colorName}
+              onChange={(e) => setColorName(e.target.value)}
+              placeholder="primary, brand, accent"
+              className="font-mono"
+            />
+          </div>
+        </div>
+
+        <div className="overflow-hidden rounded-2xl bg-ink text-ink-foreground shadow-[0_24px_60px_-28px_rgba(40,28,16,0.55)]">
+          <div className="flex items-center justify-between gap-3 px-5 pt-5">
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="gap-0"
+            >
+              <TabsList className="h-9 bg-white/10 text-ink-muted">
+                <TabsTrigger
+                  value="tailwind"
+                  className="text-ink-muted data-[state=active]:bg-white/15 data-[state=active]:text-ink-foreground"
+                >
+                  @theme
+                </TabsTrigger>
+                <TabsTrigger
+                  value="css"
+                  className="text-ink-muted data-[state=active]:bg-white/15 data-[state=active]:text-ink-foreground"
+                >
+                  Variables
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={copyToClipboard}
+              className="bg-white/10 text-ink-foreground hover:bg-white/15"
+            >
+              {copied ? <CheckIcon className="h-4 w-4" /> : "Copy"}
+            </Button>
+          </div>
+
+          <div className="px-5 pb-5 pt-4">
+            {activeTab === "tailwind" ? (
+              <div className="space-y-4">
+                <pre className="max-h-72 overflow-auto font-mono text-[12px] leading-relaxed text-ink-foreground/90">
+                  {themeSnippet}
+                </pre>
+                <p className="text-xs leading-relaxed text-ink-muted">
+                  Drop into your CSS. Then{" "}
+                  <code className="font-mono text-ink-foreground">
+                    bg-{tokenName}-500
+                  </code>{" "}
+                  or{" "}
+                  <code className="font-mono text-ink-foreground">
+                    var(--color-{tokenName}-500)
+                  </code>
                   .
-                </span>
-              ) : null}
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-10 gap-2">
-              {palette.map((color) => {
-                const baseShade =
-                  !useTwoColors && basePosition < PALETTE_SHADE_INDICES.length
-                    ? PALETTE_SHADE_INDICES[basePosition]
-                    : null;
-                return (
-                <ColorSwatch 
-                  key={color.index} 
-                  color={color}
-                  onColorChange={handleColorChange}
-                  isMatchedBase={baseShade !== null && color.index === baseShade}
-                  contrastPreview={showContrastPreview}
-                />
-                );
-              })}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <pre className="max-h-72 overflow-auto font-mono text-[12px] leading-relaxed text-ink-foreground/90">
+                  {`:root {\n${cssSnippet}}`}
+                </pre>
+                <p className="text-xs text-ink-muted">
+                  Custom properties for stylesheets outside Tailwind.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              {tokenName}
+            </p>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <p className="text-sm text-muted-foreground">
+                Click a stop to edit. Lock one to keep it while you retune the rest.
+                {!useTwoColors && positionInfo ? (
+                  <>
+                    {" "}
+                    Base sits on{" "}
+                    <span className="font-mono text-foreground">
+                      {positionInfo.shade}
+                    </span>
+                    .
+                  </>
+                ) : null}
+              </p>
             </div>
           </div>
-        </CardContent>
-        
-        <CardFooter className="flex justify-between text-sm text-muted-foreground">
-          <p>Generated palette for {colorName}</p>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-            <span className="shrink-0">Preview:</span>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
+          <div className="flex flex-wrap items-center gap-5">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={resetPalette}
+              disabled={!hasOverrides && !hasLockedStops}
+              tabIndex={hasOverrides || hasLockedStops ? undefined : -1}
+              aria-hidden={!(hasOverrides || hasLockedStops)}
+              className={cn(
+                "h-7 shrink-0 px-2 text-muted-foreground hover:text-foreground",
+                !(hasOverrides || hasLockedStops) && "invisible pointer-events-none",
+              )}
+            >
+              <RefreshCwIcon className="h-3.5 w-3.5" />
+              Reset
+            </Button>
+            <div className="flex items-center gap-2.5">
+              <Switch
                 id="show-bento"
                 checked={showBentoPreview}
-                onChange={(e) => setShowBentoPreview(e.target.checked)}
+                onCheckedChange={setShowBentoPreview}
               />
-              <label htmlFor="show-bento">Bento layout</label>
+              <Label htmlFor="show-bento" className="font-normal text-sm">
+                Layout
+              </Label>
             </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
+            <div className="flex items-center gap-2.5">
+              <Switch
                 id="show-contrast"
                 checked={showContrastPreview}
-                onChange={(e) => setShowContrastPreview(e.target.checked)}
+                onCheckedChange={setShowContrastPreview}
               />
-              <label htmlFor="show-contrast">Contrast</label>
+              <Label htmlFor="show-contrast" className="font-normal text-sm">
+                Contrast
+              </Label>
             </div>
           </div>
-        </CardFooter>
-      </Card>
-      
-      {showBentoPreview && palette.length > 0 && (
-        <div className="w-full border-t pt-8">
-          <BentoLayout colorName={colorName} palette={palette} basePosition={useTwoColors ? PALETTE_INDEX_500 : basePosition} />
         </div>
+
+        <div className="-mx-5 overflow-x-auto md:mx-0">
+          <div className="flex min-w-[44rem] overflow-hidden rounded-none ring-1 ring-foreground/10 md:min-w-0 md:rounded-2xl">
+            {palette.map((color) => {
+              const baseShade =
+                !useTwoColors && basePosition < PALETTE_SHADE_INDICES.length
+                  ? PALETTE_SHADE_INDICES[basePosition]
+                  : null;
+              return (
+                <ColorSwatch
+                  key={color.index}
+                  color={color}
+                  onColorChange={handleColorChange}
+                  locked={lockedShades.has(color.index)}
+                  onToggleLock={() => toggleLock(color.index)}
+                  isMatchedBase={
+                    baseShade !== null && color.index === baseShade
+                  }
+                  contrastPreview={showContrastPreview}
+                />
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {showBentoPreview && palette.length > 0 && (
+        <BentoLayout
+          colorName={colorName}
+          palette={palette}
+          basePosition={useTwoColors ? PALETTE_INDEX_500 : basePosition}
+        />
       )}
     </div>
   );

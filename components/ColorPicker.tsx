@@ -62,26 +62,28 @@ export function ColorPicker({ label, value, onChange }: ColorPickerProps) {
 
   return (
     <div className="space-y-2">
-      <Label htmlFor={`color-${label}`}>{label}</Label>
-      <div className="flex gap-2 items-center">
-        <Input 
+      <Label htmlFor={`color-${label}`} className="text-muted-foreground font-normal">
+        {label}
+      </Label>
+      <div className="flex items-center gap-2">
+        <Input
           id={`color-${label}`}
-          type="text" 
-          value={inputValue} 
+          type="text"
+          value={inputValue}
           onChange={handleInputChange}
           onBlur={handleInputBlur}
-          className="flex-1"
-          placeholder="#3b82f6 or 3b82f6"
+          className="flex-1 font-mono"
+          placeholder="#3b82f6"
         />
-        <div className="relative flex items-center">
+        <div className="relative size-10 shrink-0">
           <Input
             type="color"
             value={colord(value).toHex()}
             onChange={handleColorChange}
-            className="absolute opacity-0 cursor-pointer size-10"
+            className="absolute inset-0 size-10 cursor-pointer opacity-0"
           />
-          <div 
-            className="size-10 rounded border border-border"
+          <div
+            className="size-10 rounded-lg ring-1 ring-foreground/15"
             style={{ backgroundColor: value }}
           />
         </div>

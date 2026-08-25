@@ -1,4 +1,4 @@
-import { CodeIcon, PaletteIcon, BlendIcon } from "lucide-react";
+import { BlendIcon, CodeIcon, PaletteIcon } from "lucide-react";
 import prkBlack from "../prk-black.png";
 import { cn } from "./ui/utils";
 
@@ -11,73 +11,68 @@ const navItems = [
   { id: "palette", label: "Palettes", shortLabel: "Palettes", icon: PaletteIcon },
   {
     id: "css-to-tailwind",
-    label: "CSS → Tailwind",
+    label: "Convert",
     shortLabel: "CSS",
     icon: CodeIcon,
   },
   {
     id: "oklch-gradient",
-    label: "OKLCH gradient",
-    shortLabel: "Gradient",
+    label: "Gradient",
+    shortLabel: "Mix",
     icon: BlendIcon,
   },
 ] as const;
 
 export function Header({ activePage, onPageChange }: HeaderProps) {
   return (
-    <header className="w-full border-b bg-background">
-      <div className="mx-auto px-4 md:px-6 py-4">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <a
-              href="https://piers.cc"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="shrink-0"
-              aria-label="Piers"
-            >
-              <img src={prkBlack} alt="Piers" className="h-10" />
-            </a>
-            <div>
-              <h1 className="text-2xl font-bold">Tailwind CSS Toolkit</h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                Palettes, CSS conversion, and OKLCH gradients
-              </p>
-            </div>
-          </div>
-
-          <nav
-            className="inline-flex h-10 w-full max-w-full md:w-auto items-center rounded-lg border border-border bg-muted/60 p-1 shadow-sm"
-            role="tablist"
-            aria-label="Tools"
-          >
-            {navItems.map(({ id, label, shortLabel, icon: Icon }) => {
-              const active = activePage === id;
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  onClick={() => onPageChange(id)}
-                  className={cn(
-                    "inline-flex flex-1 md:flex-initial items-center justify-center gap-1.5 rounded-md px-2.5 sm:px-3 py-1.5 text-sm font-medium transition-colors",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                    active
-                      ? "bg-background text-foreground shadow-sm border border-border/80"
-                      : "text-muted-foreground hover:text-foreground border border-transparent",
-                  )}
-                >
-                  <Icon className="h-4 w-4 shrink-0" aria-hidden />
-                  <span className="hidden sm:inline">{label}</span>
-                  <span className="sm:hidden">{shortLabel}</span>
-                </button>
-              );
-            })}
-          </nav>
+    <header className="sticky top-0 z-40 bg-background/75 backdrop-blur-md">
+      <div className="mx-auto flex max-w-[1400px] items-center gap-4 px-5 py-3.5 md:px-8">
+        <a
+          href="https://piers.cc"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="shrink-0"
+          aria-label="Piers"
+        >
+          <img src={prkBlack} alt="" className="h-7 w-auto" />
+        </a>
+        <div className="min-w-0 leading-none">
+          <p className="font-serif text-[1.35rem] italic tracking-tight">Toolkit</p>
+          <p className="mt-0.5 hidden text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground sm:block">
+            Tailwind
+          </p>
         </div>
+
+        <nav
+          className="ml-auto flex items-center gap-0.5 sm:gap-1"
+          role="tablist"
+          aria-label="Tools"
+        >
+          {navItems.map(({ id, label, shortLabel, icon: Icon }) => {
+            const active = activePage === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => onPageChange(id)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-sm transition-colors sm:px-3",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                  active
+                    ? "bg-foreground text-background"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                )}
+              >
+                <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                <span className="hidden sm:inline">{label}</span>
+                <span className="sm:hidden">{shortLabel}</span>
+              </button>
+            );
+          })}
+        </nav>
       </div>
     </header>
   );
 }
-

@@ -117,9 +117,14 @@ export function BentoLayout({ colorName, palette, basePosition }: BentoLayoutPro
   };
 
   return (
-    <div className="w-full space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="font-medium">Layout Preview using {colorName} palette</h3>
+    <div className="w-full space-y-8">
+      <div>
+        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+          In situ
+        </p>
+        <h3 className="mt-1 font-serif text-2xl italic tracking-tight md:text-3xl">
+          {colorName} in a layout
+        </h3>
       </div>
 
       {/* Main Bento Grid - No gaps, seamless layout */}
