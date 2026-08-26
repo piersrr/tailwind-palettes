@@ -21,7 +21,10 @@ export interface ScaleParams {
   lightnessBias: number;
   /** 0 linear, 1 fully eased — compresses both ends of the ramp. */
   lightnessEase: number;
-  /** Multiplies the whole chroma envelope. 1 keeps the anchor's own chroma. */
+  /**
+   * Multiplies the chroma envelope for non-anchor stops. Anchors always keep
+   * their own chroma; 1 leaves the envelope unscaled around them.
+   */
   saturation: number;
   /** Where chroma peaks, 0 at stop 50 through 1 at stop 950. */
   chromaPeak: number;
@@ -373,7 +376,12 @@ function effectiveChromaPeak(
   return peak;
 }
 
-/** Per-anchor chroma scale, interpolated across the ramp and held outside. */
+/**
+ * Per-anchor chroma scale, interpolated across the ramp and held outside.
+ * Saturation scales the envelope for stops between/beyond anchors; at each
+ * anchor the returned chroma is exactly the anchor's own chroma so the base
+ * color is never muted or boosted by the saturation slider.
+ */
 function anchoredChroma(
   positions: number[],
   anchors: ScaleAnchor[],
@@ -383,13 +391,23 @@ function anchoredChroma(
     ...inputParams,
     chromaPeak: effectiveChromaPeak(positions, anchors, inputParams),
   };
+  const sat = Math.max(0, params.saturation);
+  const anchorByStop = new Map(
+    anchors.map((anchor) => [anchor.stopIndex, anchor.color.c]),
+  );
 
+  // Scales are solved against the unscaled envelope so that, before saturation
+  // is applied, every anchor lands on its own chroma. Saturation then multiplies
+  // only non-anchor stops (see below).
   const scales = anchors.map((anchor) => {
     const envelope = chromaEnvelope(positions[anchor.stopIndex], params);
     return envelope < 0.001 ? anchor.color.c : anchor.color.c / envelope;
   });
 
   return positions.map((t, i) => {
+    const anchorC = anchorByStop.get(i);
+    if (anchorC !== undefined) return Math.max(0, anchorC);
+
     let scale = scales[0] ?? 0;
     if (anchors.length > 1) {
       const firstIndex = anchors[0].stopIndex;
@@ -410,7 +428,7 @@ function anchoredChroma(
         }
       }
     }
-    return Math.max(0, scale * Math.max(0, params.saturation) * chromaEnvelope(t, params));
+    return Math.max(0, scale * sat * chromaEnvelope(t, params));
   });
 }
 
@@ -480,16 +498,21 @@ export function generateScale(
   const lightness = anchoredLightness(raw, ordered);
   const chroma = anchoredChroma(positions, ordered, params);
   const hue = anchoredHue(positions, ordered, params);
-  const anchorStops = new Set(ordered.map((anchor) => anchor.stopIndex));
-
-  return stops.map((shade, i) =>
-    buildStop(
-      shade,
-      { l: lightness[i], c: chroma[i], h: hue[i] },
-      anchorStops.has(i),
-      params,
-    ),
+  const anchorColorByStop = new Map(
+    ordered.map((anchor) => [anchor.stopIndex, anchor.color]),
   );
+
+  return stops.map((shade, i) => {
+    const anchorColor = anchorColorByStop.get(i);
+    // Prefer the anchor triplet verbatim so L/C/H (and thus hex) match the
+    // picker even if a curve param would otherwise nudge the stop.
+    return buildStop(
+      shade,
+      anchorColor ?? { l: lightness[i], c: chroma[i], h: hue[i] },
+      anchorColor !== undefined,
+      params,
+    );
+  });
 }
 
 function buildStop(

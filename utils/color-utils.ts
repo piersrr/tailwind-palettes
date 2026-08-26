@@ -147,6 +147,24 @@ export function generateCssVariables(
   return cssVars;
 }
 
+/**
+ * Generate a plain JS/TS token object for Mantine and other token maps
+ */
+export function generateTokenObject(
+  colorName: string,
+  palette: ColorInfo[],
+  outputFormat: ThemeOutputFormat = "hex",
+): string {
+  const name = colorName || "brand";
+  const nameKey = /^[A-Za-z_$][\w$]*$/.test(name) ? name : `'${name}'`;
+  const lines = palette.map((color) => {
+    const value = outputFormat === "oklch" ? color.oklch : color.hex;
+    return `    ${color.index}: '${value}',`;
+  });
+
+  return `{\n  ${nameKey}: {\n${lines.join("\n")}\n  },\n}`;
+}
+
 export interface ColorInfo {
   index: number;
   hex: string;

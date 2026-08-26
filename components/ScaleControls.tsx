@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { ChevronDownIcon, RefreshCwIcon } from "lucide-react";
 import { Button } from "./ui/button";
 import { Label } from "./ui/label";
@@ -6,7 +7,6 @@ import { Slider } from "./ui/slider";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 import {
   Collapsible,
-  CollapsibleContent,
   CollapsibleTrigger,
 } from "./ui/collapsible";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
@@ -191,25 +191,25 @@ export function ScaleControls({
       onOpenChange={onOpenChange}
       className="rounded-xl border border-border/80 bg-card/60"
     >
-      <div className="flex items-center justify-between gap-3 px-4 py-3">
+      <div className="group relative flex items-center justify-between gap-3 px-4 py-3">
         <CollapsibleTrigger asChild>
           <button
             type="button"
-            className="flex items-center gap-2 text-sm text-foreground transition-colors hover:text-foreground/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md"
-          >
-            <ChevronDownIcon
-              className={cn(
-                "h-4 w-4 text-muted-foreground transition-transform",
-                open && "rotate-180",
-              )}
-              aria-hidden
-            />
-            Advanced
-            <span className="text-xs text-muted-foreground">
-              {activePreset ? activePreset.label : "Custom"}
-            </span>
-          </button>
+            className="absolute inset-0 z-0 cursor-pointer rounded-[inherit] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+            aria-label={open ? "Close advanced controls" : "Open advanced controls"}
+          />
         </CollapsibleTrigger>
+        <div className="pointer-events-none relative z-10 flex items-center gap-2 text-sm text-foreground transition-colors group-hover:text-foreground/80">
+          <ChevronDownIcon
+            className="h-4 w-4 text-muted-foreground transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
+            style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
+            aria-hidden
+          />
+          Advanced
+          <span className="text-xs text-muted-foreground">
+            {activePreset ? activePreset.label : "Custom"}
+          </span>
+        </div>
         <Button
           type="button"
           variant="ghost"
@@ -217,7 +217,7 @@ export function ScaleControls({
           onClick={() => onChange({ ...DEFAULT_SCALE_PARAMS })}
           disabled={isDefault}
           className={cn(
-            "h-7 shrink-0 px-2 text-muted-foreground hover:text-foreground",
+            "relative z-10 h-7 shrink-0 px-2 text-muted-foreground hover:text-foreground",
             isDefault && "invisible pointer-events-none",
           )}
           tabIndex={isDefault ? -1 : undefined}
@@ -228,7 +228,16 @@ export function ScaleControls({
         </Button>
       </div>
 
-      <CollapsibleContent>
+      <AnimatePresence initial={false}>
+        {open ? (
+          <motion.div
+            key="advanced-panel"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
+            className="overflow-hidden"
+          >
         <div className="space-y-5 border-t border-border/70 px-4 py-4 md:px-5">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
@@ -317,7 +326,7 @@ export function ScaleControls({
             <Group title="Chroma">
               <ControlSlider
                 label="Saturation"
-                hint="1.00 keeps the base color's own chroma."
+                hint="Scales chroma along the ramp. The base stop always keeps its own color."
                 value={params.saturation}
                 display={`${params.saturation.toFixed(2)}\u00d7`}
                 min={0}
@@ -413,7 +422,9 @@ export function ScaleControls({
             </Group>
           </div>
         </div>
-      </CollapsibleContent>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </Collapsible>
   );
 }

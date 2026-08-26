@@ -90,52 +90,56 @@ function Sparkline({
       >
         {label}
       </span>
-      <svg
-        viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
-        preserveAspectRatio="none"
-        className="h-6 min-w-0 flex-1 overflow-visible text-foreground/70"
-        role="img"
-        aria-label={`${title} across the scale, ${format(values[0])} to ${format(values[last])}`}
-      >
-        <defs>
-          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="currentColor" stopOpacity="0.16" />
-            <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        {anchorIndices.map((i) => (
-          <line
-            key={i}
-            x1={points[i].x}
-            y1={0}
-            x2={points[i].x}
-            y2={VIEW_HEIGHT}
+      <div className="relative h-6 min-w-0 flex-1">
+        <svg
+          viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
+          preserveAspectRatio="none"
+          className="absolute inset-0 size-full overflow-visible text-foreground/70"
+          role="img"
+          aria-label={`${title} across the scale, ${format(values[0])} to ${format(values[last])}`}
+        >
+          <defs>
+            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="currentColor" stopOpacity="0.16" />
+              <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          {anchorIndices.map((i) => (
+            <line
+              key={i}
+              x1={points[i].x}
+              y1={0}
+              x2={points[i].x}
+              y2={VIEW_HEIGHT}
+              stroke="currentColor"
+              strokeWidth="0.5"
+              strokeDasharray="1.5 1.5"
+              className="opacity-40"
+            />
+          ))}
+          <polygon points={area} fill={`url(#${gradientId})`} />
+          <polyline
+            points={line}
+            fill="none"
             stroke="currentColor"
-            strokeWidth="0.5"
-            strokeDasharray="1.5 1.5"
-            className="opacity-40"
+            strokeWidth="1"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
           />
-        ))}
-        <polygon points={area} fill={`url(#${gradientId})`} />
-        <polyline
-          points={line}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-          vectorEffect="non-scaling-stroke"
-        />
+        </svg>
         {anchorIndices.map((i) => (
-          <circle
+          <span
             key={i}
-            cx={points[i].x}
-            cy={points[i].y}
-            r="1.6"
-            className="fill-primary"
+            aria-hidden
+            className="pointer-events-none absolute size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary"
+            style={{
+              left: `${(points[i].x / VIEW_WIDTH) * 100}%`,
+              top: `${(points[i].y / VIEW_HEIGHT) * 100}%`,
+            }}
           />
         ))}
-      </svg>
+      </div>
       <span className="w-[5.5rem] shrink-0 text-right font-mono text-[10px] tabular-nums text-muted-foreground">
         {format(values[0])} → {format(values[last])}
       </span>

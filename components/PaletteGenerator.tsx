@@ -13,6 +13,7 @@ import { ScaleControls } from "./ScaleControls";
 import {
   generateTailwindTheme,
   generateCssVariables,
+  generateTokenObject,
   formatOklch,
   stringToOklch,
   shadeToStopIndex,
@@ -165,7 +166,9 @@ export function PaletteGenerator() {
     const textToCopy =
       activeTab === "tailwind"
         ? generateTailwindTheme(colorName, palette, inputColorSpace)
-        : generateCssVariables(colorName, palette, inputColorSpace);
+        : activeTab === "css"
+          ? `:root {\n${generateCssVariables(colorName, palette, inputColorSpace)}}`
+          : generateTokenObject(colorName, palette, inputColorSpace);
 
     navigator.clipboard.writeText(textToCopy);
     setCopied(true);
@@ -178,6 +181,11 @@ export function PaletteGenerator() {
     inputColorSpace,
   );
   const cssSnippet = generateCssVariables(colorName, palette, inputColorSpace);
+  const tokensSnippet = generateTokenObject(
+    colorName,
+    palette,
+    inputColorSpace,
+  );
   const tokenName = colorName || "brand";
   const hasLockedStops = overrides.size > 0;
   const hasPinnedStops =
@@ -315,6 +323,12 @@ export function PaletteGenerator() {
                   >
                     Variables
                   </TabsTrigger>
+                  <TabsTrigger
+                    value="tokens"
+                    className="text-ink-muted data-[state=active]:bg-white/15 data-[state=active]:text-ink-foreground"
+                  >
+                    Tokens
+                  </TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
@@ -328,13 +342,13 @@ export function PaletteGenerator() {
             </Button>
           </div>
 
-          <div className="px-5 pb-5 pt-4">
+          <div className="flex h-80 flex-col gap-4 px-5 pb-5 pt-4">
             {activeTab === "tailwind" ? (
-              <div className="space-y-4">
-                <pre className="max-h-72 overflow-auto font-mono text-[12px] leading-relaxed text-ink-foreground/90">
+              <>
+                <pre className="min-h-0 flex-1 overflow-auto font-mono text-[12px] leading-relaxed text-ink-foreground/90">
                   {themeSnippet}
                 </pre>
-                <p className="text-xs leading-relaxed text-ink-muted">
+                <p className="shrink-0 text-xs leading-relaxed text-ink-muted">
                   Drop into your CSS. Then{" "}
                   <code className="font-mono text-ink-foreground">
                     bg-{tokenName}-500
@@ -345,16 +359,28 @@ export function PaletteGenerator() {
                   </code>
                   .
                 </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <pre className="max-h-72 overflow-auto font-mono text-[12px] leading-relaxed text-ink-foreground/90">
+              </>
+            ) : activeTab === "css" ? (
+              <>
+                <pre className="min-h-0 flex-1 overflow-auto font-mono text-[12px] leading-relaxed text-ink-foreground/90">
                   {`:root {\n${cssSnippet}}`}
                 </pre>
-                <p className="text-xs text-ink-muted">
+                <p className="shrink-0 text-xs leading-relaxed text-ink-muted">
                   Custom properties for stylesheets outside Tailwind.
                 </p>
-              </div>
+              </>
+            ) : (
+              <>
+                <pre className="min-h-0 flex-1 overflow-auto font-mono text-[12px] leading-relaxed text-ink-foreground/90">
+                  {tokensSnippet}
+                </pre>
+                <p className="shrink-0 text-xs leading-relaxed text-ink-muted">
+                  Plain token map for Mantine, Style Dictionary, or any JS/TS
+                  theme. Mantine wants 10 shades — drop{" "}
+                  <code className="font-mono text-ink-foreground">950</code>{" "}
+                  or map to an array if needed.
+                </p>
+              </>
             )}
           </div>
         </div>
