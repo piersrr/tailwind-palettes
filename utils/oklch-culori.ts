@@ -1,8 +1,37 @@
-import { converter, formatHex, parse } from "culori";
+import { clampChroma, converter, formatHex, inGamut, parse } from "culori";
 
 const toOklch = converter("oklch");
 
 export type OklchTriplet = { l: number; c: number; h: number };
+
+/** Which display gamut a generated scale should stay inside. */
+export type ColorGamut = "srgb" | "p3";
+
+const inSrgb = inGamut("rgb");
+
+/**
+ * Reduce chroma until the color fits the target gamut, keeping lightness and hue.
+ * Preferable to letting `formatHex` clip RGB channels, which shifts hue and
+ * makes the hex and OKLCH forms of the same stop describe different colors.
+ */
+export function mapOklchToGamut(
+  { l, c, h }: OklchTriplet,
+  gamut: ColorGamut,
+): { color: OklchTriplet; hex: string; clipped: boolean } {
+  const input = { mode: "oklch" as const, l, c, h };
+  const mapped = clampChroma(input, "oklch", gamut === "p3" ? "p3" : "rgb");
+  const color = {
+    l: mapped.l ?? l,
+    c: mapped.c ?? 0,
+    h: mapped.h ?? h,
+  };
+  return {
+    color,
+    hex: formatHex(mapped) ?? "#808080",
+    // In P3 the hex is a clipped sRGB stand-in, so callers can flag it.
+    clipped: !inSrgb(mapped),
+  };
+}
 
 function parsedColorToOklchTriplet(color: NonNullable<ReturnType<typeof parse>>): OklchTriplet {
   const o = toOklch(color);

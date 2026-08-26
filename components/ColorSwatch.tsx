@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { LockIcon, LockOpenIcon } from "lucide-react";
+import { LockIcon, LockOpenIcon, PinIcon, PinOffIcon } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "./ui/tooltip";
 import { cn } from "./ui/utils";
 import {
@@ -13,8 +13,12 @@ import {
 interface ColorSwatchProps {
   color: ColorInfo;
   onColorChange: (colorIndex: number, newColor: ColorInfo) => void;
-  /** Highlights the palette stop that matches the auto-placed base color (single-color mode). */
-  isMatchedBase?: boolean;
+  /** Badge text when this stop holds an anchor color, e.g. "Base" or "Blend". */
+  anchorLabel?: string | null;
+  /** True when the anchor was placed here by hand rather than by lightness. */
+  anchorPinned?: boolean;
+  /** Moves the nearest anchor to this stop, or back to auto if already pinned here. */
+  onSetAnchor?: () => void;
   /** Show sample text and WCAG contrast badge for body-sized text. */
   contrastPreview?: boolean;
   locked?: boolean;
@@ -24,7 +28,9 @@ interface ColorSwatchProps {
 export function ColorSwatch({
   color,
   onColorChange,
-  isMatchedBase,
+  anchorLabel,
+  anchorPinned,
+  onSetAnchor,
   contrastPreview,
   locked,
   onToggleLock,
@@ -70,25 +76,25 @@ export function ColorSwatch({
     <div
       className="group relative flex min-w-0 flex-1 flex-col"
       aria-label={
-        isMatchedBase
-          ? `Shade ${color.index}, matches your base color input`
+        anchorLabel
+          ? `Shade ${color.index}, anchored to your ${anchorLabel.toLowerCase()} color`
           : `Shade ${color.index}`
       }
     >
       <div className="relative">
         <button
           type="button"
-          className="relative h-36 w-full cursor-pointer md:h-44"
+          className="relative block h-36 w-full cursor-pointer border-0 p-0 md:h-44"
           style={{ backgroundColor: color.hex }}
           onClick={handleColorClick}
           aria-label={`Edit shade ${color.index}`}
         >
-          {isMatchedBase ? (
+          {anchorLabel ? (
             <span
               className="absolute left-2 top-2 rounded-full px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.14em]"
               style={{ color: contrastText, backgroundColor: `${contrastText}22` }}
             >
-              Base
+              {anchorLabel}
             </span>
           ) : null}
 
@@ -102,46 +108,90 @@ export function ColorSwatch({
             </span>
           ) : null}
         </button>
-        {onToggleLock ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                aria-pressed={locked}
-                aria-label={
-                  locked
-                    ? `Unlock shade ${color.index}`
-                    : `Lock shade ${color.index}`
-                }
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onToggleLock();
-                }}
-                className={cn(
-                  "absolute right-1.5 top-1.5 z-10 inline-flex size-7 items-center justify-center rounded-full transition-opacity",
-                  "focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
-                  locked
-                    ? "opacity-100"
-                    : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
-                )}
-                style={{
-                  color: contrastText,
-                  backgroundColor: `${contrastText}24`,
-                }}
-              >
-                {locked ? (
-                  <LockIcon className="size-3.5" aria-hidden />
-                ) : (
-                  <LockOpenIcon className="size-3.5" aria-hidden />
-                )}
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {locked ? "Unlock — follow the generator" : "Lock — keep this stop"}
-            </TooltipContent>
-          </Tooltip>
-        ) : null}
+        <div className="absolute right-1.5 top-1.5 z-10 flex items-center gap-1">
+          {onSetAnchor ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-pressed={anchorPinned}
+                  aria-label={
+                    anchorPinned
+                      ? `Place the base color automatically instead of on shade ${color.index}`
+                      : `Make shade ${color.index} the base color`
+                  }
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onSetAnchor();
+                  }}
+                  className={cn(
+                    "inline-flex size-7 items-center justify-center rounded-full transition-opacity",
+                    "focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+                    anchorPinned
+                      ? "opacity-100"
+                      : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
+                  )}
+                  style={{
+                    color: contrastText,
+                    backgroundColor: `${contrastText}24`,
+                  }}
+                >
+                  {anchorPinned ? (
+                    <PinOffIcon className="size-3.5" aria-hidden />
+                  ) : (
+                    <PinIcon className="size-3.5" aria-hidden />
+                  )}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {anchorPinned
+                  ? "Unpin — place the base color by lightness"
+                  : "Pin the base color to this stop"}
+              </TooltipContent>
+            </Tooltip>
+          ) : null}
+          {onToggleLock ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-pressed={locked}
+                  aria-label={
+                    locked
+                      ? `Unlock shade ${color.index}`
+                      : `Lock shade ${color.index}`
+                  }
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onToggleLock();
+                  }}
+                  className={cn(
+                    "inline-flex size-7 items-center justify-center rounded-full transition-opacity",
+                    "focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+                    locked
+                      ? "opacity-100"
+                      : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
+                  )}
+                  style={{
+                    color: contrastText,
+                    backgroundColor: `${contrastText}24`,
+                  }}
+                >
+                  {locked ? (
+                    <LockIcon className="size-3.5" aria-hidden />
+                  ) : (
+                    <LockOpenIcon className="size-3.5" aria-hidden />
+                  )}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {locked ? "Unlock — follow the generator" : "Lock — keep this stop"}
+              </TooltipContent>
+            </Tooltip>
+          ) : null}
+        </div>
         <input
           ref={colorPickerRef}
           type="color"

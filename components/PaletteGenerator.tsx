@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -9,42 +9,67 @@ import { ColorSwatch } from "./ColorSwatch";
 import { BentoLayout } from "./BentoLayout";
 import { OklchColorEditor, clampOklch } from "./OklchColorEditor";
 import { PageIntro } from "./PageIntro";
+import { ScaleControls } from "./ScaleControls";
 import {
-  generatePalette,
-  generatePaletteFromTwoColors,
   generateTailwindTheme,
   generateCssVariables,
-  determinePalettePosition,
   formatOklch,
   stringToOklch,
+  shadeToStopIndex,
   PALETTE_SHADE_INDICES,
-  PALETTE_INDEX_500,
   ColorInfo,
 } from "../utils/color-utils";
+import {
+  DEFAULT_SCALE_PARAMS,
+  generateScale,
+  suggestBaseStop,
+  type ScaleAnchor,
+  type ScaleParams,
+} from "../utils/color-scale";
 import { cssColorToHex } from "../utils/oklch-culori";
-import { CheckIcon, CircleHelpIcon, Loader2Icon, RefreshCwIcon } from "lucide-react";
+import { CheckIcon, CircleHelpIcon, RefreshCwIcon } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { cn } from "./ui/utils";
+
+const LAST_STOP = PALETTE_SHADE_INDICES.length - 1;
+
+/**
+ * Keeps the blend color off the base color's stop. Two colors of similar
+ * lightness would otherwise collapse onto the same anchor and the second
+ * one would be dropped.
+ */
+function separateStop(
+  candidate: number,
+  taken: number,
+  darker: boolean,
+): number {
+  if (candidate !== taken) return candidate;
+  const shifted = darker ? taken + 1 : taken - 1;
+  if (shifted >= 0 && shifted <= LAST_STOP) return shifted;
+  return darker ? taken - 1 : taken + 1;
+}
 
 export function PaletteGenerator() {
   const [baseColor1, setBaseColor1] = useState("#3b82f6");
   const [baseColor2, setBaseColor2] = useState("#8b5cf6");
   const [useTwoColors, setUseTwoColors] = useState(false);
-  const [colorName, setColorName] = useState("theme");
-  const [generatedPalette, setGeneratedPalette] = useState<ColorInfo[]>([]);
-  const [palette, setPalette] = useState<ColorInfo[]>([]);
-  const [lockedShades, setLockedShades] = useState<Set<number>>(() => new Set());
+  const [colorName, setColorName] = useState("brand");
+  const [params, setParams] = useState<ScaleParams>(DEFAULT_SCALE_PARAMS);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  /** null means "place this color by its lightness". */
+  const [pinnedStop1, setPinnedStop1] = useState<number | null>(null);
+  const [pinnedStop2, setPinnedStop2] = useState<number | null>(null);
+  /** Stops the user locked or edited; these survive regeneration. */
+  const [overrides, setOverrides] = useState<Map<number, ColorInfo>>(
+    () => new Map(),
+  );
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState("tailwind");
   const [showBentoPreview, setShowBentoPreview] = useState(false);
   const [showContrastPreview, setShowContrastPreview] = useState(true);
-  const [basePosition, setBasePosition] = useState<number>(0);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [inputColorSpace, setInputColorSpace] = useState<"hex" | "oklch">(
     "oklch",
   );
-  const lockedShadesRef = useRef(lockedShades);
-  lockedShadesRef.current = lockedShades;
 
   const handleInputColorSpaceChange = (value: string) => {
     const next = value as "hex" | "oklch";
@@ -55,115 +80,122 @@ export function PaletteGenerator() {
     setInputColorSpace(next);
   };
 
-  useEffect(() => {
-    setIsGenerating(true);
-    const id = window.setTimeout(() => {
-      let newPalette: ColorInfo[];
+  const base1 = useMemo(
+    () => clampOklch(stringToOklch(baseColor1)),
+    [baseColor1],
+  );
+  const base2 = useMemo(
+    () => clampOklch(stringToOklch(baseColor2)),
+    [baseColor2],
+  );
 
-      if (useTwoColors) {
-        newPalette = generatePaletteFromTwoColors(baseColor1, baseColor2);
-      } else {
-        const position = determinePalettePosition(baseColor1);
-        setBasePosition(position);
-        newPalette = generatePalette(baseColor1);
-      }
+  const stop1 = useMemo(
+    () => pinnedStop1 ?? suggestBaseStop(base1, params),
+    [pinnedStop1, base1, params],
+  );
 
-      newPalette.sort((a, b) => a.index - b.index);
-      const locked = lockedShadesRef.current;
-      setGeneratedPalette(newPalette);
-      setPalette((prev) =>
-        newPalette.map((color) => {
-          if (locked.has(color.index)) {
-            const current = prev.find((stop) => stop.index === color.index);
-            if (current) return { ...current };
-          }
-          return { ...color };
-        }),
-      );
-      setIsGenerating(false);
-    }, 0);
+  const stop2 = useMemo(() => {
+    if (pinnedStop2 !== null) return pinnedStop2;
+    const suggested = suggestBaseStop(base2, params);
+    return separateStop(suggested, stop1, base2.l <= base1.l);
+  }, [pinnedStop2, base2, base1.l, params, stop1]);
 
-    return () => window.clearTimeout(id);
-  }, [baseColor1, baseColor2, useTwoColors]);
+  const anchors = useMemo<ScaleAnchor[]>(() => {
+    const first: ScaleAnchor = { stopIndex: stop1, color: base1 };
+    if (!useTwoColors) return [first];
+    return [first, { stopIndex: stop2, color: base2 }];
+  }, [useTwoColors, stop1, stop2, base1, base2]);
+
+  const generated = useMemo(
+    () => generateScale(anchors, params),
+    [anchors, params],
+  );
+
+  const palette = useMemo(
+    () => generated.map((stop) => overrides.get(stop.index) ?? stop),
+    [generated, overrides],
+  );
 
   const handleColorChange = (colorIndex: number, newColor: ColorInfo) => {
-    setPalette((prev) =>
-      prev.map((color) => (color.index === colorIndex ? newColor : color)),
-    );
-    setLockedShades((prev) => {
-      if (prev.has(colorIndex)) return prev;
-      const next = new Set(prev);
-      next.add(colorIndex);
+    setOverrides((prev) => {
+      const next = new Map(prev);
+      next.set(colorIndex, newColor);
       return next;
     });
   };
 
   const toggleLock = (colorIndex: number) => {
-    const unlocking = lockedShades.has(colorIndex);
-    setLockedShades((prev) => {
-      const next = new Set(prev);
-      if (unlocking) next.delete(colorIndex);
-      else next.add(colorIndex);
+    setOverrides((prev) => {
+      const next = new Map(prev);
+      if (next.has(colorIndex)) {
+        next.delete(colorIndex);
+        return next;
+      }
+      const current = generated.find((stop) => stop.index === colorIndex);
+      if (current) next.set(colorIndex, { ...current });
       return next;
     });
-    if (unlocking) {
-      const generated = generatedPalette.find((stop) => stop.index === colorIndex);
-      if (generated) {
-        setPalette((prev) =>
-          prev.map((color) =>
-            color.index === colorIndex ? { ...generated } : color,
-          ),
-        );
-      }
+  };
+
+  /** Moves whichever anchor is nearest onto this stop, or releases it. */
+  const setAnchorStop = (shade: number) => {
+    const index = shadeToStopIndex(shade);
+    if (index < 0) return;
+
+    if (!useTwoColors) {
+      setPinnedStop1((prev) => (prev === index ? null : index));
+      return;
+    }
+    if (index === stop1 && pinnedStop1 !== null) {
+      setPinnedStop1(null);
+      return;
+    }
+    if (index === stop2 && pinnedStop2 !== null) {
+      setPinnedStop2(null);
+      return;
+    }
+    if (Math.abs(index - stop1) <= Math.abs(index - stop2)) {
+      setPinnedStop1(index);
+    } else {
+      setPinnedStop2(index);
     }
   };
 
   const copyToClipboard = () => {
-    let textToCopy = "";
-
-    if (activeTab === "tailwind") {
-      textToCopy = generateTailwindTheme(colorName, palette, inputColorSpace);
-    } else if (activeTab === "css") {
-      textToCopy = generateCssVariables(colorName, palette, inputColorSpace);
-    }
+    const textToCopy =
+      activeTab === "tailwind"
+        ? generateTailwindTheme(colorName, palette, inputColorSpace)
+        : generateCssVariables(colorName, palette, inputColorSpace);
 
     navigator.clipboard.writeText(textToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const getPositionInfo = () => {
-    if (useTwoColors) return null;
-    return {
-      position: basePosition,
-      shade: PALETTE_SHADE_INDICES[basePosition],
-    };
-  };
-
-  const positionInfo = getPositionInfo();
   const themeSnippet = generateTailwindTheme(
     colorName,
     palette,
     inputColorSpace,
   );
   const cssSnippet = generateCssVariables(colorName, palette, inputColorSpace);
-  const tokenName = colorName || "theme";
-  const hasLockedStops = lockedShades.size > 0;
-  const hasOverrides = palette.some((color) => {
-    const generated = generatedPalette.find((stop) => stop.index === color.index);
-    return generated != null && generated.hex.toLowerCase() !== color.hex.toLowerCase();
-  });
+  const tokenName = colorName || "brand";
+  const hasLockedStops = overrides.size > 0;
+  const hasPinnedStops =
+    pinnedStop1 !== null || (useTwoColors && pinnedStop2 !== null);
+  const baseShade = PALETTE_SHADE_INDICES[stop1];
+  const blendShade = PALETTE_SHADE_INDICES[stop2];
+  const gamutMappedCount = generated.filter(
+    (stop) => stop.wasGamutMapped,
+  ).length;
 
-  const resetPalette = () => {
-    setLockedShades(new Set());
-    setPalette(generatedPalette.map((color) => ({ ...color })));
-  };
+  const resetPalette = () => setOverrides(new Map());
 
   return (
     <div className="space-y-12">
-      <PageIntro kicker="Scale" title="Turn your color into a scale.">
-        One stop becomes a 50–950 ramp in OKLCH. Click any swatch to retune it,
-        then copy Tailwind v4 tokens or CSS variables.
+      <PageIntro kicker="Colors" title="Turn a color into a scale.">
+        One stop becomes a 50–950 ramp in OKLCH. Pin your color to any tile and
+        the rest bends around it, then reshape the whole trajectory under
+        Advanced.
       </PageIntro>
 
       <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
@@ -211,12 +243,6 @@ export function PaletteGenerator() {
                 </p>
               </TooltipContent>
             </Tooltip>
-            {isGenerating ? (
-              <Loader2Icon
-                className="h-4 w-4 shrink-0 animate-spin text-muted-foreground"
-                aria-label="Updating palette"
-              />
-            ) : null}
           </div>
 
           {inputColorSpace === "hex" ? (
@@ -228,7 +254,7 @@ export function PaletteGenerator() {
           ) : (
             <OklchColorEditor
               label="Base color"
-              value={clampOklch(stringToOklch(baseColor1))}
+              value={base1}
               onChange={(o) => setBaseColor1(formatOklch(o))}
             />
           )}
@@ -254,50 +280,44 @@ export function PaletteGenerator() {
           {useTwoColors && inputColorSpace === "oklch" && (
             <OklchColorEditor
               label="Second color"
-              value={clampOklch(stringToOklch(baseColor2))}
+              value={base2}
               onChange={(o) => setBaseColor2(formatOklch(o))}
             />
           )}
-
-          <div className="space-y-2">
-            <Label
-              htmlFor="color-name"
-              className="text-muted-foreground font-normal"
-            >
-              Token name
-            </Label>
-            <Input
-              id="color-name"
-              value={colorName}
-              onChange={(e) => setColorName(e.target.value)}
-              placeholder="primary, brand, accent"
-              className="font-mono"
-            />
-          </div>
         </div>
 
         <div className="overflow-hidden rounded-2xl bg-ink text-ink-foreground shadow-[0_24px_60px_-28px_rgba(0,0,0,0.45)]">
           <div className="flex items-center justify-between gap-3 px-5 pt-5">
-            <Tabs
-              value={activeTab}
-              onValueChange={setActiveTab}
-              className="gap-0"
-            >
-              <TabsList className="h-9 bg-white/10 text-ink-muted">
-                <TabsTrigger
-                  value="tailwind"
-                  className="text-ink-muted data-[state=active]:bg-white/15 data-[state=active]:text-ink-foreground"
-                >
-                  @theme
-                </TabsTrigger>
-                <TabsTrigger
-                  value="css"
-                  className="text-ink-muted data-[state=active]:bg-white/15 data-[state=active]:text-ink-foreground"
-                >
-                  Variables
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
+              <Input
+                id="color-name"
+                value={colorName}
+                onChange={(e) => setColorName(e.target.value)}
+                placeholder="primary"
+                aria-label="Token name"
+                className="h-9 w-[8.5rem] shrink-0 border-white/15 bg-white/10 font-mono text-ink-foreground placeholder:text-ink-muted focus-visible:border-white/30 focus-visible:ring-white/20"
+              />
+              <Tabs
+                value={activeTab}
+                onValueChange={setActiveTab}
+                className="gap-0"
+              >
+                <TabsList className="h-9 bg-white/10 text-ink-muted">
+                  <TabsTrigger
+                    value="tailwind"
+                    className="text-ink-muted data-[state=active]:bg-white/15 data-[state=active]:text-ink-foreground"
+                  >
+                    @theme
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="css"
+                    className="text-ink-muted data-[state=active]:bg-white/15 data-[state=active]:text-ink-foreground"
+                  >
+                    Variables
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
             <Button
               variant="secondary"
               size="sm"
@@ -348,15 +368,25 @@ export function PaletteGenerator() {
             </p>
             <div className="mt-1 flex flex-wrap items-center gap-2">
               <p className="text-sm text-muted-foreground">
-                Click a stop to edit. Lock one to keep it while you retune the rest.
-                {!useTwoColors && positionInfo ? (
+                Click a stop to edit, lock one to keep it, or pin your base
+                color to a different tile. Base sits on{" "}
+                <span className="font-mono text-foreground">{baseShade}</span>
+                {useTwoColors ? (
                   <>
                     {" "}
-                    Base sits on{" "}
+                    and the blend on{" "}
                     <span className="font-mono text-foreground">
-                      {positionInfo.shade}
+                      {blendShade}
                     </span>
-                    .
+                  </>
+                ) : null}
+                {hasPinnedStops ? "" : " by lightness"}.
+                {gamutMappedCount > 0 ? (
+                  <>
+                    {" "}
+                    {gamutMappedCount} stop{gamutMappedCount === 1 ? "" : "s"}{" "}
+                    pulled back to fit{" "}
+                    {params.gamut === "p3" ? "Display P3" : "sRGB"}.
                   </>
                 ) : null}
               </p>
@@ -367,13 +397,31 @@ export function PaletteGenerator() {
               type="button"
               variant="ghost"
               size="sm"
-              onClick={resetPalette}
-              disabled={!hasOverrides && !hasLockedStops}
-              tabIndex={hasOverrides || hasLockedStops ? undefined : -1}
-              aria-hidden={!(hasOverrides || hasLockedStops)}
+              onClick={() => {
+                setPinnedStop1(null);
+                setPinnedStop2(null);
+              }}
+              disabled={!hasPinnedStops}
+              tabIndex={hasPinnedStops ? undefined : -1}
+              aria-hidden={!hasPinnedStops}
               className={cn(
                 "h-7 shrink-0 px-2 text-muted-foreground hover:text-foreground",
-                !(hasOverrides || hasLockedStops) && "invisible pointer-events-none",
+                !hasPinnedStops && "invisible pointer-events-none",
+              )}
+            >
+              Auto place
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={resetPalette}
+              disabled={!hasLockedStops}
+              tabIndex={hasLockedStops ? undefined : -1}
+              aria-hidden={!hasLockedStops}
+              className={cn(
+                "h-7 shrink-0 px-2 text-muted-foreground hover:text-foreground",
+                !hasLockedStops && "invisible pointer-events-none",
               )}
             >
               <RefreshCwIcon className="h-3.5 w-3.5" />
@@ -403,35 +451,45 @@ export function PaletteGenerator() {
         </div>
 
         <div className="-mx-5 overflow-x-auto md:mx-0">
-          <div className="flex min-w-[44rem] overflow-hidden rounded-none ring-1 ring-foreground/10 md:min-w-0 md:rounded-2xl">
+          <div className="flex min-w-[48rem] overflow-hidden rounded-none border border-foreground/10 md:min-w-0 md:rounded-2xl">
             {palette.map((color) => {
-              const baseShade =
-                !useTwoColors && basePosition < PALETTE_SHADE_INDICES.length
-                  ? PALETTE_SHADE_INDICES[basePosition]
-                  : null;
+              const isBase = color.index === baseShade;
+              const isBlend = useTwoColors && color.index === blendShade;
               return (
                 <ColorSwatch
                   key={color.index}
                   color={color}
                   onColorChange={handleColorChange}
-                  locked={lockedShades.has(color.index)}
+                  locked={overrides.has(color.index)}
                   onToggleLock={() => toggleLock(color.index)}
-                  isMatchedBase={
-                    baseShade !== null && color.index === baseShade
+                  anchorLabel={isBase ? "Base" : isBlend ? "Blend" : null}
+                  anchorPinned={
+                    (isBase && pinnedStop1 !== null) ||
+                    (isBlend && pinnedStop2 !== null)
                   }
+                  onSetAnchor={() => setAnchorStop(color.index)}
                   contrastPreview={showContrastPreview}
                 />
               );
             })}
           </div>
         </div>
+
+        <ScaleControls
+          params={params}
+          onChange={setParams}
+          baseColor={base1}
+          stops={generated}
+          open={advancedOpen}
+          onOpenChange={setAdvancedOpen}
+        />
       </section>
 
       {showBentoPreview && palette.length > 0 && (
         <BentoLayout
           colorName={colorName}
           palette={palette}
-          basePosition={useTwoColors ? PALETTE_INDEX_500 : basePosition}
+          basePosition={stop1}
         />
       )}
     </div>

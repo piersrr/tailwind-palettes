@@ -7,8 +7,12 @@ A comprehensive toolkit for working with Tailwind CSS more efficiently. Generate
 ## Features
 
 ### 🎨 Color Palette Generator
-- **Intelligent Color Positioning**: Automatically positions base colors in the correct shade (50-900) based on lightness analysis
-- **Dual Color Mode**: Generate palettes from one or two base colors with smooth interpolation
+- **Parametric OKLCH Scale**: Lightness, chroma and hue are each driven by a tunable curve across the full 50–950 ramp
+- **Pick Your Base Tile**: Pin the input color to any stop and the rest of the ramp bends around it, keeping your color exact
+- **Advanced Trajectory Controls**: Ramp endpoints and curve shape, saturation, chroma peak and falloff, plus hue drift at each end
+- **Scale Presets**: Tailwind, Soft, Vivid, Neutral and Flat starting points
+- **Gamut Mapping**: Chroma is reduced to fit sRGB or Display P3 instead of clipping RGB channels, so hex and OKLCH always agree
+- **Dual Color Mode**: Blend a second color as a second anchor while still spanning the whole ramp
 - **Native Color Pickers**: Click any color swatch to customize with native browser color picker
 - **Multiple Format Support**: View colors in both HEX and OKLCH formats
 - **Tailwind v4 Output**: Generate modern `@theme` blocks with CSS custom properties
@@ -67,29 +71,33 @@ A comprehensive toolkit for working with Tailwind CSS more efficiently. Generate
 
 ### Color Palette Generator
 
-1. **Choose your base color** using the color picker or enter a hex value
-2. **Optional**: Enable "Use two colors" for gradient-based palettes
-3. **Name your color scheme** (defaults to "theme")
-4. **Generate palette** - the tool automatically positions your color intelligently
-5. **Customize any color** by clicking on the color swatches
-6. **Copy the output** in either Tailwind v4 @theme format or CSS variables
-7. **Preview in context** using the live layout below
+1. **Choose your base color** using the color picker or enter a hex/OKLCH value
+2. **Pick the base tile** with the pin on any swatch, or leave it on Auto to place the color by lightness
+3. **Open Advanced** to reshape the whole scale — lightness curve, saturation and chroma falloff, hue drift, gamut
+4. **Optional**: Enable "Blend a second color" to anchor a second color further along the ramp
+5. **Name your color scheme** (defaults to "theme")
+6. **Lock or customize any stop** by clicking a swatch; locked stops survive regeneration
+7. **Copy the output** in either Tailwind v4 @theme format or CSS variables
+8. **Preview in context** using the live layout below
 
 #### Example Output (Tailwind v4)
 ```css
 @theme {
-  --color-theme-50: #fef7ee;
-  --color-theme-100: #fdedd3;
-  --color-theme-200: #fbd6a5;
-  --color-theme-300: #f8b86d;
-  --color-theme-400: #f59332;
-  --color-theme-500: #f37316;
-  --color-theme-600: #e4590c;
-  --color-theme-700: #bc420c;
-  --color-theme-800: #963612;
-  --color-theme-900: #7a2e12;
+  --color-theme-50: #f7faff;
+  --color-theme-100: #dae9ff;
+  --color-theme-200: #b7d4ff;
+  --color-theme-300: #8fbcff;
+  --color-theme-400: #63a0ff;
+  --color-theme-500: #3b82f6;
+  --color-theme-600: #1866ee;
+  --color-theme-700: #1150cf;
+  --color-theme-800: #123ea9;
+  --color-theme-900: #143181;
+  --color-theme-950: #152758;
 }
 ```
+
+Shade 500 is the exact base color you put in, because that is where the scale is anchored.
 
 ### CSS to Tailwind Converter
 
@@ -117,6 +125,8 @@ shadow-md
 ├── App.tsx                     # Main application component
 ├── components/
 │   ├── PaletteGenerator.tsx    # Color palette generation tool
+│   ├── ScaleControls.tsx       # Advanced scale trajectory controls
+│   ├── ScaleCurveChart.tsx     # L/C/H curve preview
 │   ├── CssToTailwind.tsx      # CSS to Tailwind converter
 │   ├── BentoLayout.tsx        # Live preview component
 │   ├── ColorPicker.tsx        # Native color picker component
@@ -125,7 +135,9 @@ shadow-md
 │   │   └── ImageWithFallback.tsx
 │   └── ui/                    # shadcn/ui components
 ├── utils/
-│   ├── color-utils.ts         # Color manipulation and generation
+│   ├── color-scale.ts         # Parametric OKLCH scale engine
+│   ├── color-utils.ts         # Color conversion and contrast helpers
+│   ├── oklch-culori.ts        # culori boundary: parsing and gamut mapping
 │   └── css-to-tailwind.ts     # CSS conversion logic
 └── styles/
     └── globals.css            # Tailwind v4 configuration and base styles
@@ -142,14 +154,20 @@ shadow-md
 
 ## Key Features Explained
 
-### Intelligent Color Positioning
-The palette generator analyzes your base color's lightness and automatically positions it in the appropriate shade:
-- **Very light colors** (near white) → 50 shade
-- **Mid-tone colors** → 400-600 shades  
-- **Very dark colors** (near black) → 900 shade
+### Anchored Scales
+Your base color is an anchor, not just one entry in a list. The generator builds lightness, chroma and hue curves across the ramp, then remaps them so the anchored stop reproduces your color exactly while every other stop stays monotone around it. Pin the color to a different tile and the ramp re-fits: pinning a mid-tone to 700 compresses the lights and stretches the darks.
+
+By default the anchor is the stop whose lightness sits closest to your color.
+
+### The Trajectory Controls
+- **Lightness** — the endpoints for stops 50 and 950, a curve control that decides how long the scale stays light, and an easing control that compresses both ends
+- **Chroma** — an overall saturation multiplier plus the position of the chroma peak and how far chroma falls off toward each end. Falling off into the darks is what keeps them from going muddy
+- **Hue** — a drift in degrees applied at each end of the ramp, pinned to zero at the anchor. Shifting the two ends in opposite directions is what gives a scale its warm/cool temperature
+
+Defaults were fitted by least squares against Tailwind v4's own blue, red, emerald and violet ramps.
 
 ### OKLCH Color Space
-Uses OKLCH (Oklab Lightness Chroma Hue) for more perceptually uniform color generation, ensuring better color relationships across the palette.
+Uses OKLCH (Oklab Lightness Chroma Hue) for perceptually uniform color generation. Out-of-gamut stops have their chroma reduced until they fit the target gamut, which preserves lightness and hue — unlike clipping RGB channels, which shifts the hue and makes a stop's hex and OKLCH forms disagree.
 
 ### Tailwind v4 Support
 Generates modern Tailwind v4 `@theme` blocks instead of legacy JavaScript configuration, making it easy to integrate with the latest Tailwind CSS.
@@ -157,9 +175,10 @@ Generates modern Tailwind v4 `@theme` blocks instead of legacy JavaScript config
 ## Development
 
 ### Adding New Features
-1. **Color utilities**: Extend `utils/color-utils.ts`
-2. **CSS conversions**: Add handlers in `utils/css-to-tailwind.ts`
-3. **UI components**: Follow shadcn/ui patterns in `components/ui/`
+1. **Scale math**: Extend `utils/color-scale.ts`
+2. **Color utilities**: Extend `utils/color-utils.ts`
+3. **CSS conversions**: Add handlers in `utils/css-to-tailwind.ts`
+4. **UI components**: Follow shadcn/ui patterns in `components/ui/`
 
 ### Customizing Styles
 The project uses Tailwind v4 with CSS custom properties defined in `styles/globals.css`. Modify the `:root` and `.dark` selectors to customize the design system.
