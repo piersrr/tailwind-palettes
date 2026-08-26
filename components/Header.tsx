@@ -30,7 +30,7 @@ const navItems = [
 
 export function Header({ activePage, onPageChange }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-40 bg-background/75 backdrop-blur-md">
+    <header className="bg-background/75 backdrop-blur-md">
       <div className="mx-auto flex max-w-[1400px] items-center gap-4 px-5 py-3.5 md:px-8">
         <a
           href="https://piers.cc"
