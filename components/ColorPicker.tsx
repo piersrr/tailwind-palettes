@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useId } from "react";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { colord } from "colord";
@@ -10,12 +10,13 @@ interface ColorPickerProps {
 }
 
 export function ColorPicker({ label, value, onChange }: ColorPickerProps) {
+  const cssInputId = useId();
   const [inputValue, setInputValue] = useState(value);
 
   useEffect(() => {
     setInputValue(value);
   }, [value]);
-  
+
   const normalizeColorInput = (raw: string) => {
     const trimmed = raw.trim();
     // Accept 6-digit hex without a leading "#" (e.g. 3b82f6 → #3b82f6).
@@ -53,7 +54,7 @@ export function ColorPicker({ label, value, onChange }: ColorPickerProps) {
       onChange(hex);
     }
   };
-  
+
   const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newColor = e.target.value;
     setInputValue(newColor);
@@ -61,32 +62,41 @@ export function ColorPicker({ label, value, onChange }: ColorPickerProps) {
   };
 
   return (
-    <div className="space-y-2">
-      <Label htmlFor={`color-${label}`} className="text-muted-foreground font-normal">
-        {label}
-      </Label>
-      <div className="flex items-center gap-2">
+    <div className="w-full min-w-0 space-y-3">
+      <Label className="font-normal text-muted-foreground">{label}</Label>
+
+      <div className="relative w-full max-h-[100px] aspect-[2/1] overflow-hidden rounded-2xl ring-1 ring-foreground/10 sm:max-h-[110px]">
+        <div className="absolute inset-0" style={{ backgroundColor: value }} />
+        <input
+          type="color"
+          value={colord(value).toHex()}
+          onChange={handleColorChange}
+          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+          aria-label={`${label} — color picker`}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor={cssInputId} className="text-sm text-muted-foreground">
+          Hex color (paste)
+        </Label>
         <Input
-          id={`color-${label}`}
+          id={cssInputId}
           type="text"
+          spellCheck={false}
+          className="font-mono text-sm"
           value={inputValue}
           onChange={handleInputChange}
           onBlur={handleInputBlur}
-          className="flex-1 font-mono"
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              (e.target as HTMLInputElement).blur();
+            }
+          }}
           placeholder="#3b82f6"
+          aria-label={`${label} — hex color`}
         />
-        <div className="relative size-10 shrink-0">
-          <Input
-            type="color"
-            value={colord(value).toHex()}
-            onChange={handleColorChange}
-            className="absolute inset-0 size-10 cursor-pointer opacity-0"
-          />
-          <div
-            className="size-10 rounded-lg ring-1 ring-foreground/15"
-            style={{ backgroundColor: value }}
-          />
-        </div>
       </div>
     </div>
   );
