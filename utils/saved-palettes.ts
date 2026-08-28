@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import type { ColorInfo } from "./color-utils";
+import type { ColorInfo, PaletteStopCount } from "./color-utils";
 import { DEFAULT_SCALE_PARAMS, type ScaleParams } from "./color-scale";
 import type { ColorGamut } from "./oklch-culori";
 
@@ -16,6 +16,8 @@ export interface PaletteSnapshot {
   pinnedStop2: number | null;
   overrides: ColorInfo[];
   inputColorSpace: "hex" | "oklch";
+  /** 11 = Tailwind 50–950, 10 = 50–900. Missing on older saves → 11. */
+  stopCount: PaletteStopCount;
 }
 
 export interface SavedPalette {
@@ -43,6 +45,7 @@ export const DEFAULT_SNAPSHOT: PaletteSnapshot = {
   pinnedStop2: null,
   overrides: [],
   inputColorSpace: "oklch",
+  stopCount: 11,
 };
 
 export const EMPTY_STORE: SavedPalettesStore = {
@@ -72,6 +75,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function parseNullableInt(value: unknown): number | null {
   if (value === null) return null;
   return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function parsePinnedStop(value: unknown, lastStop: number): number | null {
+  const parsed = parseNullableInt(value);
+  if (parsed === null) return null;
+  return Math.max(0, Math.min(parsed, lastStop));
 }
 
 function parseParams(raw: unknown): ScaleParams {
@@ -125,16 +134,18 @@ function parseSnapshot(raw: unknown): PaletteSnapshot | null {
     if (!parsed) return null;
     overrides.push(parsed);
   }
+  const stopCount: PaletteStopCount = raw.stopCount === 10 ? 10 : 11;
   return {
     colorName: raw.colorName,
     baseColor1: raw.baseColor1,
     baseColor2: raw.baseColor2,
     useTwoColors: raw.useTwoColors,
     params: parseParams(raw.params),
-    pinnedStop1: parseNullableInt(raw.pinnedStop1),
-    pinnedStop2: parseNullableInt(raw.pinnedStop2),
+    pinnedStop1: parsePinnedStop(raw.pinnedStop1, stopCount - 1),
+    pinnedStop2: parsePinnedStop(raw.pinnedStop2, stopCount - 1),
     overrides: storedOverrides(overrides),
     inputColorSpace: raw.inputColorSpace,
+    stopCount,
   };
 }
 

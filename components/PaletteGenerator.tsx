@@ -18,8 +18,9 @@ import {
   formatOklch,
   stringToOklch,
   shadeToStopIndex,
-  PALETTE_SHADE_INDICES,
+  shadeIndicesForCount,
   ColorInfo,
+  type PaletteStopCount,
 } from "../utils/color-utils";
 import {
   generateScale,
@@ -39,8 +40,6 @@ import { CheckIcon, CircleHelpIcon, RefreshCwIcon } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { cn } from "./ui/utils";
 
-const LAST_STOP = PALETTE_SHADE_INDICES.length - 1;
-
 /**
  * Keeps the blend color off the base color's stop. Two colors of similar
  * lightness would otherwise collapse onto the same anchor and the second
@@ -50,11 +49,20 @@ function separateStop(
   candidate: number,
   taken: number,
   darker: boolean,
+  lastStop: number,
 ): number {
   if (candidate !== taken) return candidate;
   const shifted = darker ? taken + 1 : taken - 1;
-  if (shifted >= 0 && shifted <= LAST_STOP) return shifted;
+  if (shifted >= 0 && shifted <= lastStop) return shifted;
   return darker ? taken - 1 : taken + 1;
+}
+
+function clampPinnedStop(
+  pinned: number | null,
+  lastStop: number,
+): number | null {
+  if (pinned === null) return null;
+  return Math.max(0, Math.min(pinned, lastStop));
 }
 
 export function PaletteGenerator() {
@@ -91,7 +99,13 @@ export function PaletteGenerator() {
   const [inputColorSpace, setInputColorSpace] = useState<"hex" | "oklch">(
     bootSnapshot.inputColorSpace,
   );
+  const [stopCount, setStopCount] = useState<PaletteStopCount>(
+    bootSnapshot.stopCount,
+  );
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  const shadeIndices = shadeIndicesForCount(stopCount);
+  const lastStop = shadeIndices.length - 1;
 
   const handleInputColorSpaceChange = (value: string) => {
     const next = value as "hex" | "oklch";
@@ -111,16 +125,17 @@ export function PaletteGenerator() {
     [baseColor2],
   );
 
-  const stop1 = useMemo(
-    () => pinnedStop1 ?? suggestBaseStop(base1, params),
-    [pinnedStop1, base1, params],
-  );
+  const stop1 = useMemo(() => {
+    const pinned = clampPinnedStop(pinnedStop1, lastStop);
+    return pinned ?? suggestBaseStop(base1, params, shadeIndices.length);
+  }, [pinnedStop1, base1, params, lastStop, shadeIndices.length]);
 
   const stop2 = useMemo(() => {
-    if (pinnedStop2 !== null) return pinnedStop2;
-    const suggested = suggestBaseStop(base2, params);
-    return separateStop(suggested, stop1, base2.l <= base1.l);
-  }, [pinnedStop2, base2, base1.l, params, stop1]);
+    const pinned = clampPinnedStop(pinnedStop2, lastStop);
+    if (pinned !== null) return pinned;
+    const suggested = suggestBaseStop(base2, params, shadeIndices.length);
+    return separateStop(suggested, stop1, base2.l <= base1.l, lastStop);
+  }, [pinnedStop2, base2, base1.l, params, stop1, lastStop, shadeIndices.length]);
 
   const anchors = useMemo<ScaleAnchor[]>(() => {
     const first: ScaleAnchor = { stopIndex: stop1, color: base1 };
@@ -129,8 +144,8 @@ export function PaletteGenerator() {
   }, [useTwoColors, stop1, stop2, base1, base2]);
 
   const generated = useMemo(
-    () => generateScale(anchors, params),
-    [anchors, params],
+    () => generateScale(anchors, params, shadeIndices),
+    [anchors, params, shadeIndices],
   );
 
   const palette = useMemo(
@@ -149,6 +164,7 @@ export function PaletteGenerator() {
       pinnedStop2,
       overrides: storedOverrides(overrides.values()),
       inputColorSpace,
+      stopCount,
     }),
     [
       colorName,
@@ -160,6 +176,7 @@ export function PaletteGenerator() {
       pinnedStop2,
       overrides,
       inputColorSpace,
+      stopCount,
     ],
   );
 
@@ -173,10 +190,23 @@ export function PaletteGenerator() {
     setBaseColor2(snapshot.baseColor2);
     setUseTwoColors(snapshot.useTwoColors);
     setParams({ ...snapshot.params });
-    setPinnedStop1(snapshot.pinnedStop1);
-    setPinnedStop2(snapshot.pinnedStop2);
+    setPinnedStop1(
+      clampPinnedStop(snapshot.pinnedStop1, snapshot.stopCount - 1),
+    );
+    setPinnedStop2(
+      clampPinnedStop(snapshot.pinnedStop2, snapshot.stopCount - 1),
+    );
     setOverrides(overridesToMap(snapshot.overrides));
     setInputColorSpace(snapshot.inputColorSpace);
+    setStopCount(snapshot.stopCount);
+  };
+
+  const handleStopCountChange = (value: string) => {
+    const next: PaletteStopCount = value === "10" ? 10 : 11;
+    const nextLast = next - 1;
+    setStopCount(next);
+    setPinnedStop1((prev) => clampPinnedStop(prev, nextLast));
+    setPinnedStop2((prev) => clampPinnedStop(prev, nextLast));
   };
 
   const handleSavePalette = (name: string, mode: "update" | "new") => {
@@ -199,6 +229,14 @@ export function PaletteGenerator() {
 
   const handleColorChange = (colorIndex: number, newColor: ColorInfo) => {
     setOverrides((prev) => {
+      const existing = prev.get(colorIndex);
+      if (
+        existing &&
+        existing.hex === newColor.hex &&
+        existing.oklch === newColor.oklch
+      ) {
+        return prev;
+      }
       const next = new Map(prev);
       next.set(colorIndex, newColor);
       return next;
@@ -220,7 +258,7 @@ export function PaletteGenerator() {
 
   /** Moves whichever anchor is nearest onto this stop, or releases it. */
   const setAnchorStop = (shade: number) => {
-    const index = shadeToStopIndex(shade);
+    const index = shadeToStopIndex(shade, shadeIndices);
     if (index < 0) return;
 
     if (!useTwoColors) {
@@ -267,24 +305,72 @@ export function PaletteGenerator() {
     inputColorSpace,
   );
   const tokenName = colorName || "brand";
-  const hasLockedStops = overrides.size > 0;
+  const hasLockedStops = shadeIndices.some((shade) => overrides.has(shade));
   const hasPinnedStops =
     pinnedStop1 !== null || (useTwoColors && pinnedStop2 !== null);
-  const baseShade = PALETTE_SHADE_INDICES[stop1];
-  const blendShade = PALETTE_SHADE_INDICES[stop2];
+  const baseShade = shadeIndices[stop1];
+  const blendShade = shadeIndices[stop2];
   const gamutMappedCount = generated.filter(
     (stop) => stop.wasGamutMapped,
   ).length;
 
   const resetPalette = () => setOverrides(new Map());
 
+  const formatControl = (
+    <div className="flex shrink-0 items-center gap-1.5">
+      <Tabs
+        value={inputColorSpace}
+        onValueChange={handleInputColorSpaceChange}
+        aria-label="Base color format"
+        className="gap-0"
+      >
+        <TabsList className="h-10">
+          <TabsTrigger value="oklch">OKLCH</TabsTrigger>
+          <TabsTrigger value="hex">Hex</TabsTrigger>
+        </TabsList>
+      </Tabs>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            className="inline-flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="What is the difference between Hex and OKLCH?"
+          >
+            <CircleHelpIcon className="h-4 w-4" aria-hidden />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent
+          showArrow={false}
+          side="bottom"
+          align="start"
+          sideOffset={10}
+          className="max-w-[min(22rem,calc(100vw-2rem))] border border-border bg-card px-4 py-3.5 text-left text-card-foreground shadow-lg rounded-xl text-sm leading-relaxed"
+        >
+          <p className="font-medium mb-2">Hex vs OKLCH</p>
+          <p className="text-muted-foreground mb-2">
+            <span className="font-medium text-foreground">Hex</span> is{" "}
+            <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.8rem]">
+              #RRGGBB
+            </code>
+            . Compact, universal, and not how we see lightness.
+          </p>
+          <p className="text-muted-foreground">
+            <span className="font-medium text-foreground">OKLCH</span> is
+            lightness, chroma, and hue. Ramps stay smoother when you step in
+            this space.
+          </p>
+        </TooltipContent>
+      </Tooltip>
+    </div>
+  );
+
   return (
     <div className="space-y-12">
       <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
         <PageIntro kicker="Colors" title="Turn a color into a scale.">
-          One stop becomes a 50–950 ramp in OKLCH. Pin your color to any tile and
-          the rest bends around it, then reshape the whole trajectory under
-          Advanced.
+          One stop becomes a {stopCount === 10 ? "50–900" : "50–950"} ramp in
+          OKLCH. Pin your color to any tile and the rest bends around it, then
+          reshape the whole trajectory under Advanced.
         </PageIntro>
         <SavedPalettes
           palettes={palettes}
@@ -301,62 +387,19 @@ export function PaletteGenerator() {
 
       <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
         <div className="space-y-7">
-          <div className="flex flex-wrap items-center gap-3">
-            <Tabs
-              value={inputColorSpace}
-              onValueChange={handleInputColorSpaceChange}
-              aria-label="Base color format"
-            >
-              <TabsList>
-                <TabsTrigger value="oklch">OKLCH</TabsTrigger>
-                <TabsTrigger value="hex">Hex</TabsTrigger>
-              </TabsList>
-            </Tabs>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  className="inline-flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  aria-label="What is the difference between Hex and OKLCH?"
-                >
-                  <CircleHelpIcon className="h-4 w-4" aria-hidden />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent
-                showArrow={false}
-                side="bottom"
-                align="start"
-                sideOffset={10}
-                className="max-w-[min(22rem,calc(100vw-2rem))] border border-border bg-card px-4 py-3.5 text-left text-card-foreground shadow-lg rounded-xl text-sm leading-relaxed"
-              >
-                <p className="font-medium mb-2">Hex vs OKLCH</p>
-                <p className="text-muted-foreground mb-2">
-                  <span className="font-medium text-foreground">Hex</span> is{" "}
-                  <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.8rem]">
-                    #RRGGBB
-                  </code>
-                  . Compact, universal, and not how we see lightness.
-                </p>
-                <p className="text-muted-foreground">
-                  <span className="font-medium text-foreground">OKLCH</span> is
-                  lightness, chroma, and hue. Ramps stay smoother when you step
-                  in this space.
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
-
           {inputColorSpace === "hex" ? (
             <ColorPicker
               label="Base color"
               value={baseColor1}
               onChange={setBaseColor1}
+              formatControl={formatControl}
             />
           ) : (
             <OklchColorEditor
               label="Base color"
               value={base1}
               onChange={(o) => setBaseColor1(formatOklch(o))}
+              formatControl={formatControl}
             />
           )}
 
@@ -369,6 +412,26 @@ export function PaletteGenerator() {
               checked={useTwoColors}
               onCheckedChange={setUseTwoColors}
             />
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/80 bg-card/60 px-4 py-3">
+            <Label className="font-normal">Shades</Label>
+            <Tabs
+              value={String(stopCount)}
+              onValueChange={handleStopCountChange}
+              aria-label="Number of shades"
+            >
+              <TabsList>
+                <TabsTrigger value="11">
+                  11
+                  <span className="hidden sm:inline"> · 50–950</span>
+                </TabsTrigger>
+                <TabsTrigger value="10">
+                  10
+                  <span className="hidden sm:inline"> · 50–900</span>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
 
           {useTwoColors && inputColorSpace === "hex" && (
@@ -468,10 +531,23 @@ export function PaletteGenerator() {
                   {tokensSnippet}
                 </pre>
                 <p className="shrink-0 text-xs leading-relaxed text-ink-muted">
-                  Plain token map for Mantine, Style Dictionary, or any JS/TS
-                  theme. Mantine wants 10 shades — drop{" "}
-                  <code className="font-mono text-ink-foreground">950</code>{" "}
-                  or map to an array if needed.
+                  {stopCount === 10 ? (
+                    <>
+                      Ten shades (50–900) for Mantine, Chakra, and other
+                      10-stop systems. Map to an array if your theme wants
+                      indexes 0–9.
+                    </>
+                  ) : (
+                    <>
+                      Plain token map for Mantine, Style Dictionary, or any
+                      JS/TS theme. Mantine wants 10 shades — switch to 10
+                      shades, or drop{" "}
+                      <code className="font-mono text-ink-foreground">
+                        950
+                      </code>
+                      .
+                    </>
+                  )}
                 </p>
               </>
             )}
@@ -512,6 +588,26 @@ export function PaletteGenerator() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-5">
+            <div className="flex items-center gap-2.5">
+              <Switch
+                id="show-bento"
+                checked={showBentoPreview}
+                onCheckedChange={setShowBentoPreview}
+              />
+              <Label htmlFor="show-bento" className="font-normal text-sm">
+                Layout
+              </Label>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <Switch
+                id="show-contrast"
+                checked={showContrastPreview}
+                onCheckedChange={setShowContrastPreview}
+              />
+              <Label htmlFor="show-contrast" className="font-normal text-sm">
+                Contrast
+              </Label>
+            </div>
             <Button
               type="button"
               variant="ghost"
@@ -546,26 +642,6 @@ export function PaletteGenerator() {
               <RefreshCwIcon className="h-3.5 w-3.5" />
               Reset
             </Button>
-            <div className="flex items-center gap-2.5">
-              <Switch
-                id="show-bento"
-                checked={showBentoPreview}
-                onCheckedChange={setShowBentoPreview}
-              />
-              <Label htmlFor="show-bento" className="font-normal text-sm">
-                Layout
-              </Label>
-            </div>
-            <div className="flex items-center gap-2.5">
-              <Switch
-                id="show-contrast"
-                checked={showContrastPreview}
-                onCheckedChange={setShowContrastPreview}
-              />
-              <Label htmlFor="show-contrast" className="font-normal text-sm">
-                Contrast
-              </Label>
-            </div>
           </div>
         </div>
 

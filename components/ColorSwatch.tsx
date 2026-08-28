@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LockIcon, LockOpenIcon, PinIcon, PinOffIcon } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "./ui/tooltip";
 import { cn } from "./ui/utils";
@@ -9,6 +9,12 @@ import {
   stringToOklch,
   wcagNormalTextLevel,
 } from "../utils/color-utils";
+
+/** Native `<input type="color">` only accepts #rrggbb. */
+function toColorInputHex(hex: string): string {
+  const match = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim());
+  return match ? `#${match[1].toLowerCase()}` : "#808080";
+}
 
 interface ColorSwatchProps {
   color: ColorInfo;
@@ -38,6 +44,17 @@ export function ColorSwatch({
   const [copiedHex, setCopiedHex] = useState(false);
   const [copiedOklch, setCopiedOklch] = useState(false);
   const colorPickerRef = useRef<HTMLInputElement>(null);
+  const pickingRef = useRef(false);
+
+  // Keep the native picker in sync when the scale regenerates (e.g. pin), but
+  // never through a controlled `value` — browsers can re-fire onChange on that
+  // write, which locked every stop and froze the app.
+  useEffect(() => {
+    const el = colorPickerRef.current;
+    if (!el || pickingRef.current) return;
+    const next = toColorInputHex(color.hex);
+    if (el.value !== next) el.value = next;
+  }, [color.hex]);
 
   const handleCopyHex = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -62,7 +79,8 @@ export function ColorSwatch({
   const wcagLevel = wcagNormalTextLevel(contrastValue);
 
   const handleColorPickerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newHex = e.target.value;
+    const newHex = toColorInputHex(e.target.value);
+    if (newHex === toColorInputHex(color.hex)) return;
     const newOklch = stringToOklch(newHex);
 
     onColorChange(color.index, {
@@ -195,8 +213,14 @@ export function ColorSwatch({
         <input
           ref={colorPickerRef}
           type="color"
-          value={color.hex}
+          defaultValue={toColorInputHex(color.hex)}
           onChange={handleColorPickerChange}
+          onFocus={() => {
+            pickingRef.current = true;
+          }}
+          onBlur={() => {
+            pickingRef.current = false;
+          }}
           className="pointer-events-none absolute inset-0 opacity-0"
           tabIndex={-1}
           aria-hidden

@@ -1,13 +1,29 @@
 import { srgbToOklch } from "./oklch-culori";
 
-/** Tailwind-style stops from lightest to darkest */
+/** Tailwind v3+ stops from lightest to darkest (11 shades, including 950). */
 export const PALETTE_SHADE_INDICES = [
   50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950,
 ] as const;
 
+/** Classic 10-shade ramp (50–900) used by Mantine, Chakra, and Tailwind v2. */
+export const PALETTE_SHADE_INDICES_10 = [
+  50, 100, 200, 300, 400, 500, 600, 700, 800, 900,
+] as const;
+
+export type PaletteStopCount = 10 | 11;
+
+export function shadeIndicesForCount(
+  count: PaletteStopCount,
+): readonly number[] {
+  return count === 10 ? PALETTE_SHADE_INDICES_10 : PALETTE_SHADE_INDICES;
+}
+
 /** Array index for a shade number, or -1 when it is not one of our stops. */
-export function shadeToStopIndex(shade: number): number {
-  return (PALETTE_SHADE_INDICES as readonly number[]).indexOf(shade);
+export function shadeToStopIndex(
+  shade: number,
+  stops: readonly number[] = PALETTE_SHADE_INDICES,
+): number {
+  return (stops as readonly number[]).indexOf(shade);
 }
 
 /**

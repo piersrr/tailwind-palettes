@@ -41,7 +41,7 @@ export interface ScaleParams {
 
 /** A color pinned to a specific stop; the rest of the ramp bends around it. */
 export interface ScaleAnchor {
-  /** Array index into `PALETTE_SHADE_INDICES`, not the shade number. */
+  /** Array index into the current shade list, not the shade number. */
   stopIndex: number;
   color: OklchTriplet;
 }
@@ -479,7 +479,7 @@ function anchoredHue(
 /**
  * Build a full scale from one or more anchored colors plus curve params.
  * A single anchor is the common case; a second anchor blends two colors while
- * still spanning the whole 50–950 range.
+ * still spanning the whole ramp.
  */
 export function generateScale(
   anchors: ScaleAnchor[],

@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Slider } from "./ui/slider";
@@ -27,10 +27,13 @@ export function OklchColorEditor({
   label,
   value,
   onChange,
+  formatControl,
 }: {
   label: string;
   value: OklchColor;
   onChange: (next: OklchColor) => void;
+  /** Rendered to the left of the paste field (e.g. OKLCH / Hex toggle). */
+  formatControl?: ReactNode;
 }) {
   const cssInputId = useId();
   const [draft, setDraft] = useState(() => formatOklch(value));
@@ -104,23 +107,26 @@ export function OklchColorEditor({
         <Label htmlFor={cssInputId} className="text-sm text-muted-foreground">
           CSS color (paste)
         </Label>
-        <Input
-          id={cssInputId}
-          type="text"
-          spellCheck={false}
-          className="font-mono text-sm"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={commitDraft}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              (e.target as HTMLInputElement).blur();
-            }
-          }}
-          placeholder="oklch(0.55 0.18 250) or #3b82f6"
-          aria-label={`${label} — CSS color string`}
-        />
+        <div className="flex flex-wrap items-center gap-2.5">
+          {formatControl}
+          <Input
+            id={cssInputId}
+            type="text"
+            spellCheck={false}
+            className="min-w-0 flex-1 font-mono text-sm"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commitDraft}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                (e.target as HTMLInputElement).blur();
+              }
+            }}
+            placeholder="oklch(0.55 0.18 250) or #3b82f6"
+            aria-label={`${label} — CSS color string`}
+          />
+        </div>
       </div>
 
       <div className="w-full min-w-0 space-y-3 pt-0.5">

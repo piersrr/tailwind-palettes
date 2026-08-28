@@ -1,4 +1,4 @@
-import { useState, useEffect, useId } from "react";
+import { useState, useEffect, useId, type ReactNode } from "react";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { colord } from "colord";
@@ -7,9 +7,16 @@ interface ColorPickerProps {
   label: string;
   value: string;
   onChange: (color: string) => void;
+  /** Rendered to the left of the paste field (e.g. OKLCH / Hex toggle). */
+  formatControl?: ReactNode;
 }
 
-export function ColorPicker({ label, value, onChange }: ColorPickerProps) {
+export function ColorPicker({
+  label,
+  value,
+  onChange,
+  formatControl,
+}: ColorPickerProps) {
   const cssInputId = useId();
   const [inputValue, setInputValue] = useState(value);
 
@@ -80,23 +87,26 @@ export function ColorPicker({ label, value, onChange }: ColorPickerProps) {
         <Label htmlFor={cssInputId} className="text-sm text-muted-foreground">
           Hex color (paste)
         </Label>
-        <Input
-          id={cssInputId}
-          type="text"
-          spellCheck={false}
-          className="font-mono text-sm"
-          value={inputValue}
-          onChange={handleInputChange}
-          onBlur={handleInputBlur}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              (e.target as HTMLInputElement).blur();
-            }
-          }}
-          placeholder="#3b82f6"
-          aria-label={`${label} — hex color`}
-        />
+        <div className="flex flex-wrap items-center gap-2.5">
+          {formatControl}
+          <Input
+            id={cssInputId}
+            type="text"
+            spellCheck={false}
+            className="min-w-0 flex-1 font-mono text-sm"
+            value={inputValue}
+            onChange={handleInputChange}
+            onBlur={handleInputBlur}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                (e.target as HTMLInputElement).blur();
+              }
+            }}
+            placeholder="#3b82f6"
+            aria-label={`${label} — hex color`}
+          />
+        </div>
       </div>
     </div>
   );

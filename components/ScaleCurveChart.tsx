@@ -1,5 +1,4 @@
 import { useId } from "react";
-import { PALETTE_SHADE_INDICES } from "../utils/color-utils";
 import type { ScaleStop } from "../utils/color-scale";
 
 const VIEW_WIDTH = 100;
@@ -177,8 +176,7 @@ export function ScaleCurveChart({ stops }: { stops: ScaleStop[] }) {
         />
       ))}
       <p className="pt-1 pl-[1.375rem] text-[10px] text-muted-foreground/80">
-        {PALETTE_SHADE_INDICES[0]} to{" "}
-        {PALETTE_SHADE_INDICES[PALETTE_SHADE_INDICES.length - 1]}, left to right.
+        {stops[0].index} to {stops[stops.length - 1].index}, left to right.
         Dots mark the anchored stops.
       </p>
     </div>
