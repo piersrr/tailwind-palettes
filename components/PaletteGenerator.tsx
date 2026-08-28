@@ -10,6 +10,7 @@ import { BentoLayout } from "./BentoLayout";
 import { OklchColorEditor, clampOklch } from "./OklchColorEditor";
 import { PageIntro } from "./PageIntro";
 import { ScaleControls } from "./ScaleControls";
+import { SavedPalettes } from "./SavedPalettes";
 import {
   generateTailwindTheme,
   generateCssVariables,
@@ -21,13 +22,19 @@ import {
   ColorInfo,
 } from "../utils/color-utils";
 import {
-  DEFAULT_SCALE_PARAMS,
   generateScale,
   suggestBaseStop,
   type ScaleAnchor,
   type ScaleParams,
 } from "../utils/color-scale";
 import { cssColorToHex } from "../utils/oklch-culori";
+import {
+  overridesToMap,
+  snapshotsEqual,
+  storedOverrides,
+  useSavedPalettes,
+  type PaletteSnapshot,
+} from "../utils/saved-palettes";
 import { CheckIcon, CircleHelpIcon, RefreshCwIcon } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { cn } from "./ui/utils";
@@ -51,26 +58,40 @@ function separateStop(
 }
 
 export function PaletteGenerator() {
-  const [baseColor1, setBaseColor1] = useState("#3b82f6");
-  const [baseColor2, setBaseColor2] = useState("#8b5cf6");
-  const [useTwoColors, setUseTwoColors] = useState(false);
-  const [colorName, setColorName] = useState("brand");
-  const [params, setParams] = useState<ScaleParams>(DEFAULT_SCALE_PARAMS);
+  const {
+    palettes,
+    activeId,
+    bootSnapshot,
+    savePalette,
+    loadPalette,
+    deletePalette,
+    renamePalette,
+  } = useSavedPalettes();
+  const [baseColor1, setBaseColor1] = useState(bootSnapshot.baseColor1);
+  const [baseColor2, setBaseColor2] = useState(bootSnapshot.baseColor2);
+  const [useTwoColors, setUseTwoColors] = useState(bootSnapshot.useTwoColors);
+  const [colorName, setColorName] = useState(bootSnapshot.colorName);
+  const [params, setParams] = useState<ScaleParams>({ ...bootSnapshot.params });
   const [advancedOpen, setAdvancedOpen] = useState(false);
   /** null means "place this color by its lightness". */
-  const [pinnedStop1, setPinnedStop1] = useState<number | null>(null);
-  const [pinnedStop2, setPinnedStop2] = useState<number | null>(null);
+  const [pinnedStop1, setPinnedStop1] = useState<number | null>(
+    bootSnapshot.pinnedStop1,
+  );
+  const [pinnedStop2, setPinnedStop2] = useState<number | null>(
+    bootSnapshot.pinnedStop2,
+  );
   /** Stops the user locked or edited; these survive regeneration. */
-  const [overrides, setOverrides] = useState<Map<number, ColorInfo>>(
-    () => new Map(),
+  const [overrides, setOverrides] = useState<Map<number, ColorInfo>>(() =>
+    overridesToMap(bootSnapshot.overrides),
   );
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState("tailwind");
   const [showBentoPreview, setShowBentoPreview] = useState(false);
   const [showContrastPreview, setShowContrastPreview] = useState(true);
   const [inputColorSpace, setInputColorSpace] = useState<"hex" | "oklch">(
-    "oklch",
+    bootSnapshot.inputColorSpace,
   );
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const handleInputColorSpaceChange = (value: string) => {
     const next = value as "hex" | "oklch";
@@ -116,6 +137,65 @@ export function PaletteGenerator() {
     () => generated.map((stop) => overrides.get(stop.index) ?? stop),
     [generated, overrides],
   );
+
+  const currentSnapshot = useMemo<PaletteSnapshot>(
+    () => ({
+      colorName,
+      baseColor1,
+      baseColor2,
+      useTwoColors,
+      params,
+      pinnedStop1,
+      pinnedStop2,
+      overrides: storedOverrides(overrides.values()),
+      inputColorSpace,
+    }),
+    [
+      colorName,
+      baseColor1,
+      baseColor2,
+      useTwoColors,
+      params,
+      pinnedStop1,
+      pinnedStop2,
+      overrides,
+      inputColorSpace,
+    ],
+  );
+
+  const activeSaved = palettes.find((item) => item.id === activeId) ?? null;
+  const isDirty =
+    activeSaved === null || !snapshotsEqual(currentSnapshot, activeSaved.snapshot);
+
+  const applySnapshot = (snapshot: PaletteSnapshot) => {
+    setColorName(snapshot.colorName);
+    setBaseColor1(snapshot.baseColor1);
+    setBaseColor2(snapshot.baseColor2);
+    setUseTwoColors(snapshot.useTwoColors);
+    setParams({ ...snapshot.params });
+    setPinnedStop1(snapshot.pinnedStop1);
+    setPinnedStop2(snapshot.pinnedStop2);
+    setOverrides(overridesToMap(snapshot.overrides));
+    setInputColorSpace(snapshot.inputColorSpace);
+  };
+
+  const handleSavePalette = (name: string, mode: "update" | "new") => {
+    const ok = savePalette({
+      name,
+      snapshot: currentSnapshot,
+      previewHex: palette.map((stop) => stop.hex),
+      mode,
+    });
+    setSaveError(
+      ok ? null : "Couldn’t save — this browser may be blocking storage.",
+    );
+    return ok;
+  };
+
+  const handleLoadPalette = (id: string) => {
+    const loaded = loadPalette(id);
+    if (loaded) applySnapshot(loaded.snapshot);
+  };
 
   const handleColorChange = (colorIndex: number, newColor: ColorInfo) => {
     setOverrides((prev) => {
@@ -200,11 +280,24 @@ export function PaletteGenerator() {
 
   return (
     <div className="space-y-12">
-      <PageIntro kicker="Colors" title="Turn a color into a scale.">
-        One stop becomes a 50–950 ramp in OKLCH. Pin your color to any tile and
-        the rest bends around it, then reshape the whole trajectory under
-        Advanced.
-      </PageIntro>
+      <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+        <PageIntro kicker="Colors" title="Turn a color into a scale.">
+          One stop becomes a 50–950 ramp in OKLCH. Pin your color to any tile and
+          the rest bends around it, then reshape the whole trajectory under
+          Advanced.
+        </PageIntro>
+        <SavedPalettes
+          palettes={palettes}
+          activeId={activeId}
+          defaultName={colorName || "Untitled"}
+          isDirty={isDirty}
+          saveError={saveError}
+          onSave={handleSavePalette}
+          onLoad={handleLoadPalette}
+          onDelete={deletePalette}
+          onRename={renamePalette}
+        />
+      </div>
 
       <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
         <div className="space-y-7">
