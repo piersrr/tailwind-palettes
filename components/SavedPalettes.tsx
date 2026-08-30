@@ -121,7 +121,7 @@ export function SavedPalettes({
   const pendingDelete = palettes.find((palette) => palette.id === deleteId);
 
   return (
-    <div className="flex shrink-0 flex-col items-stretch gap-1.5 sm:items-end">
+    <div className="flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-r border-border/70 pr-5">
       <div className="flex items-center gap-2">
         <Button
           type="button"

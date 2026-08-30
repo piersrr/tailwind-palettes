@@ -366,24 +366,11 @@ export function PaletteGenerator() {
 
   return (
     <div className="space-y-12">
-      <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
-        <PageIntro kicker="Colors" title="Turn a color into a scale.">
-          One stop becomes a {stopCount === 10 ? "50–900" : "50–950"} ramp in
-          OKLCH. Pin your color to any tile and the rest bends around it, then
-          reshape the whole trajectory under Advanced.
-        </PageIntro>
-        <SavedPalettes
-          palettes={palettes}
-          activeId={activeId}
-          defaultName={colorName || "Untitled"}
-          isDirty={isDirty}
-          saveError={saveError}
-          onSave={handleSavePalette}
-          onLoad={handleLoadPalette}
-          onDelete={deletePalette}
-          onRename={renamePalette}
-        />
-      </div>
+      <PageIntro kicker="Colors" title="Turn a color into a scale.">
+        One stop becomes a {stopCount === 10 ? "50–900" : "50–950"} ramp in
+        OKLCH. Pin your color to any tile and the rest bends around it, then
+        reshape the whole trajectory under Advanced.
+      </PageIntro>
 
       <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
         <div className="space-y-7">
@@ -558,9 +545,22 @@ export function PaletteGenerator() {
       <section className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-              {tokenName}
-            </p>
+            <Input
+              id="swatch-token-name"
+              value={colorName}
+              onChange={(e) => setColorName(e.target.value)}
+              placeholder="brand"
+              aria-label="Token name"
+              autoComplete="off"
+              spellCheck={false}
+              className={cn(
+                "h-auto w-fit min-w-[5ch] field-sizing-content border-0 bg-transparent p-0",
+                "rounded-none text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground md:text-[11px]",
+                "shadow-none placeholder:text-muted-foreground/40",
+                "hover:text-foreground hover:underline hover:decoration-muted-foreground/40 hover:underline-offset-4",
+                "focus-visible:border-0 focus-visible:text-foreground focus-visible:ring-0",
+              )}
+            />
             <div className="mt-1 flex flex-wrap items-center gap-2">
               <p className="text-sm text-muted-foreground">
                 Click a stop to edit, lock one to keep it, or pin your base
@@ -588,6 +588,17 @@ export function PaletteGenerator() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-5">
+            <SavedPalettes
+              palettes={palettes}
+              activeId={activeId}
+              defaultName={colorName || "Untitled"}
+              isDirty={isDirty}
+              saveError={saveError}
+              onSave={handleSavePalette}
+              onLoad={handleLoadPalette}
+              onDelete={deletePalette}
+              onRename={renamePalette}
+            />
             <div className="flex items-center gap-2.5">
               <Switch
                 id="show-bento"
@@ -595,7 +606,7 @@ export function PaletteGenerator() {
                 onCheckedChange={setShowBentoPreview}
               />
               <Label htmlFor="show-bento" className="font-normal text-sm">
-                Layout
+                Layout demo
               </Label>
             </div>
             <div className="flex items-center gap-2.5">
