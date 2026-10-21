@@ -135,7 +135,15 @@ export function PaletteGenerator() {
     if (pinned !== null) return pinned;
     const suggested = suggestBaseStop(base2, params, shadeIndices.length);
     return separateStop(suggested, stop1, base2.l <= base1.l, lastStop);
-  }, [pinnedStop2, base2, base1.l, params, stop1, lastStop, shadeIndices.length]);
+  }, [
+    pinnedStop2,
+    base2,
+    base1.l,
+    params,
+    stop1,
+    lastStop,
+    shadeIndices.length,
+  ]);
 
   const anchors = useMemo<ScaleAnchor[]>(() => {
     const first: ScaleAnchor = { stopIndex: stop1, color: base1 };
@@ -182,7 +190,8 @@ export function PaletteGenerator() {
 
   const activeSaved = palettes.find((item) => item.id === activeId) ?? null;
   const isDirty =
-    activeSaved === null || !snapshotsEqual(currentSnapshot, activeSaved.snapshot);
+    activeSaved === null ||
+    !snapshotsEqual(currentSnapshot, activeSaved.snapshot);
 
   const applySnapshot = (snapshot: PaletteSnapshot) => {
     setColorName(snapshot.colorName);
@@ -366,7 +375,7 @@ export function PaletteGenerator() {
 
   return (
     <div className="space-y-12">
-      <PageIntro kicker="Colors" title="Turn a color into a scale.">
+      <PageIntro kicker="" title="Turn a color into a scale.">
         One stop becomes a {stopCount === 10 ? "50–900" : "50–950"} ramp in
         OKLCH. Pin your color to any tile and the rest bends around it, then
         reshape the whole trajectory under Advanced.
@@ -520,18 +529,15 @@ export function PaletteGenerator() {
                 <p className="shrink-0 text-xs leading-relaxed text-ink-muted">
                   {stopCount === 10 ? (
                     <>
-                      Ten shades (50–900) for Mantine, Chakra, and other
-                      10-stop systems. Map to an array if your theme wants
-                      indexes 0–9.
+                      Ten shades (50–900) for Mantine, Chakra, and other 10-stop
+                      systems. Map to an array if your theme wants indexes 0–9.
                     </>
                   ) : (
                     <>
                       Plain token map for Mantine, Style Dictionary, or any
                       JS/TS theme. Mantine wants 10 shades — switch to 10
                       shades, or drop{" "}
-                      <code className="font-mono text-ink-foreground">
-                        950
-                      </code>
+                      <code className="font-mono text-ink-foreground">950</code>
                       .
                     </>
                   )}
@@ -544,61 +550,55 @@ export function PaletteGenerator() {
 
       <section className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <Input
-              id="swatch-token-name"
-              value={colorName}
-              onChange={(e) => setColorName(e.target.value)}
-              placeholder="brand"
-              aria-label="Token name"
-              autoComplete="off"
-              spellCheck={false}
-              className={cn(
-                "h-auto w-fit min-w-[5ch] field-sizing-content border-0 bg-transparent p-0",
-                "rounded-none text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground md:text-[11px]",
-                "shadow-none placeholder:text-muted-foreground/40",
-                "hover:text-foreground hover:underline hover:decoration-muted-foreground/40 hover:underline-offset-4",
-                "focus-visible:border-0 focus-visible:text-foreground focus-visible:ring-0",
-              )}
-            />
-            <div className="mt-1 flex flex-wrap items-center gap-2">
-              <p className="text-sm text-muted-foreground">
-                Click a stop to edit, lock one to keep it, or pin your base
-                color to a different tile. Base sits on{" "}
-                <span className="font-mono text-foreground">{baseShade}</span>
-                {useTwoColors ? (
-                  <>
-                    {" "}
-                    and the blend on{" "}
-                    <span className="font-mono text-foreground">
-                      {blendShade}
-                    </span>
-                  </>
-                ) : null}
-                {hasPinnedStops ? "" : " by lightness"}.
-                {gamutMappedCount > 0 ? (
-                  <>
-                    {" "}
-                    {gamutMappedCount} stop{gamutMappedCount === 1 ? "" : "s"}{" "}
-                    pulled back to fit{" "}
-                    {params.gamut === "p3" ? "Display P3" : "sRGB"}.
-                  </>
-                ) : null}
-              </p>
-            </div>
-          </div>
+          <p className="max-w-xl text-sm text-muted-foreground">
+            Click a stop to edit, lock one to keep it, or pin your base color to
+            a different tile. Base sits on{" "}
+            <span className="font-mono text-foreground">{baseShade}</span>
+            {useTwoColors ? (
+              <>
+                {" "}
+                and the blend on{" "}
+                <span className="font-mono text-foreground">{blendShade}</span>
+              </>
+            ) : null}
+            {hasPinnedStops ? "" : " by lightness"}.
+            {gamutMappedCount > 0 ? (
+              <>
+                {" "}
+                {gamutMappedCount} stop{gamutMappedCount === 1 ? "" : "s"} pulled
+                back to fit {params.gamut === "p3" ? "Display P3" : "sRGB"}.
+              </>
+            ) : null}
+          </p>
           <div className="flex flex-wrap items-center gap-5">
-            <SavedPalettes
-              palettes={palettes}
-              activeId={activeId}
-              defaultName={colorName || "Untitled"}
-              isDirty={isDirty}
-              saveError={saveError}
-              onSave={handleSavePalette}
-              onLoad={handleLoadPalette}
-              onDelete={deletePalette}
-              onRename={renamePalette}
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                id="swatch-token-name"
+                value={colorName}
+                onChange={(e) => setColorName(e.target.value)}
+                placeholder="brand"
+                aria-label="Token name"
+                autoComplete="off"
+                spellCheck={false}
+                className={cn(
+                  "h-8 w-fit min-w-[7rem] field-sizing-content px-2.5",
+                  "border-border bg-background font-mono text-sm text-foreground",
+                  "placeholder:text-muted-foreground/50",
+                  "hover:border-foreground/25",
+                )}
+              />
+              <SavedPalettes
+                palettes={palettes}
+                activeId={activeId}
+                defaultName={colorName || "Untitled"}
+                isDirty={isDirty}
+                saveError={saveError}
+                onSave={handleSavePalette}
+                onLoad={handleLoadPalette}
+                onDelete={deletePalette}
+                onRename={renamePalette}
+              />
+            </div>
             <div className="flex items-center gap-2.5">
               <Switch
                 id="show-bento"
