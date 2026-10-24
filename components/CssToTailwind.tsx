@@ -98,7 +98,7 @@ opacity: 0.8;`,
 
   return (
     <div className="space-y-10">
-      <PageIntro kicker="Convert" title="Paste CSS. Leave with utilities.">
+      <PageIntro kicker="" title="CSS to Tailwind conversion">
         Declarations, a rule block, or an inline style attribute. ⌘/Ctrl + Enter
         converts.
       </PageIntro>
@@ -218,7 +218,7 @@ opacity: 0.8;`,
               </div>
             ) : (
               <div className="flex min-h-[240px] items-center justify-center text-center text-sm text-ink-muted">
-                Output lands here.
+                Tailwind output will appear here.
               </div>
             )}
           </div>

@@ -185,7 +185,7 @@ export function OklchGradientGenerator() {
 
   return (
     <div className="w-full space-y-10">
-      <PageIntro kicker="Mix" title="Two stops. One gradient.">
+      <PageIntro kicker="" title="Oklch gradient generator">
         Preview is the CSS you copy. The native picker is sRGB; we convert with
         culori so the tile matches. Wide-gamut OKLCH can outrun the picker.
       </PageIntro>
