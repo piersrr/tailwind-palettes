@@ -181,6 +181,26 @@ export function generateTokenObject(
   return `{\n  ${nameKey}: {\n${lines.join("\n")}\n  },\n}`;
 }
 
+/**
+ * Generate a named comma-separated list with one color value per line
+ */
+export function generateCommaSeparatedList(
+  colorName: string,
+  palette: ColorInfo[],
+  outputFormat: ThemeOutputFormat = "hex",
+): string {
+  const name = colorName || "brand";
+  const items = palette
+    .map((color, i) => {
+      const value = outputFormat === "oklch" ? color.oklch : color.hex;
+      const line = i < palette.length - 1 ? `${value},` : value;
+      return `  ${line}`;
+    })
+    .join("\n");
+
+  return `${name}: [\n${items}\n]`;
+}
+
 export interface ColorInfo {
   index: number;
   hex: string;

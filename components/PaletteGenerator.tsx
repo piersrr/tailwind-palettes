@@ -15,6 +15,7 @@ import {
   generateTailwindTheme,
   generateCssVariables,
   generateTokenObject,
+  generateCommaSeparatedList,
   formatOklch,
   stringToOklch,
   shadeToStopIndex,
@@ -295,7 +296,9 @@ export function PaletteGenerator() {
         ? generateTailwindTheme(colorName, palette, inputColorSpace)
         : activeTab === "css"
           ? `:root {\n${generateCssVariables(colorName, palette, inputColorSpace)}}`
-          : generateTokenObject(colorName, palette, inputColorSpace);
+          : activeTab === "list"
+            ? generateCommaSeparatedList(colorName, palette, inputColorSpace)
+            : generateTokenObject(colorName, palette, inputColorSpace);
 
     navigator.clipboard.writeText(textToCopy);
     setCopied(true);
@@ -309,6 +312,11 @@ export function PaletteGenerator() {
   );
   const cssSnippet = generateCssVariables(colorName, palette, inputColorSpace);
   const tokensSnippet = generateTokenObject(
+    colorName,
+    palette,
+    inputColorSpace,
+  );
+  const listSnippet = generateCommaSeparatedList(
     colorName,
     palette,
     inputColorSpace,
@@ -446,7 +454,7 @@ export function PaletteGenerator() {
           )}
         </div>
 
-        <div className="overflow-hidden rounded-2xl bg-ink text-ink-foreground shadow-[0_24px_60px_-28px_rgba(0,0,0,0.45)]">
+        <div className="overflow-hidden rounded-2xl bg-ink text-ink-foreground shadow-[0_24px_60px_-28px_rgba(0,0,0,0.45)] selection:bg-white selection:text-ink">
           <div className="flex items-center justify-between gap-3 px-5 pt-5">
             <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
               <Input
@@ -465,21 +473,27 @@ export function PaletteGenerator() {
                 <TabsList className="h-9 bg-white/10 text-ink-muted">
                   <TabsTrigger
                     value="tailwind"
-                    className="text-ink-muted data-[state=active]:bg-white/15 data-[state=active]:text-ink-foreground"
+                    className="text-ink-muted data-[state=active]:bg-white data-[state=active]:text-ink data-[state=active]:shadow-none"
                   >
                     @theme
                   </TabsTrigger>
                   <TabsTrigger
                     value="css"
-                    className="text-ink-muted data-[state=active]:bg-white/15 data-[state=active]:text-ink-foreground"
+                    className="text-ink-muted data-[state=active]:bg-white data-[state=active]:text-ink data-[state=active]:shadow-none"
                   >
                     Variables
                   </TabsTrigger>
                   <TabsTrigger
                     value="tokens"
-                    className="text-ink-muted data-[state=active]:bg-white/15 data-[state=active]:text-ink-foreground"
+                    className="text-ink-muted data-[state=active]:bg-white data-[state=active]:text-ink data-[state=active]:shadow-none"
                   >
                     Tokens
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="list"
+                    className="text-ink-muted data-[state=active]:bg-white data-[state=active]:text-ink data-[state=active]:shadow-none"
+                  >
+                    List
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
@@ -519,6 +533,16 @@ export function PaletteGenerator() {
                 </pre>
                 <p className="shrink-0 text-xs leading-relaxed text-ink-muted">
                   Custom properties for stylesheets outside Tailwind.
+                </p>
+              </>
+            ) : activeTab === "list" ? (
+              <>
+                <pre className="min-h-0 flex-1 overflow-auto font-mono text-[12px] leading-relaxed text-ink-foreground/90">
+                  {listSnippet}
+                </pre>
+                <p className="shrink-0 text-xs leading-relaxed text-ink-muted">
+                  Named array of values, one shade per line. Follows your Hex /
+                  OKLCH format toggle.
                 </p>
               </>
             ) : (
