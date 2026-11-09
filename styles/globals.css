@@ -88,7 +88,7 @@
 }
 
 @theme inline {
-  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Instrument Serif", ui-serif, Georgia, serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
   --color-background: var(--background);
@@ -178,7 +178,6 @@
 
   body {
     @apply bg-background font-sans text-foreground antialiased;
-    font-feature-settings: "ss01" on, "cv11" on;
   }
 
   ::selection {
