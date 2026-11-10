@@ -42,7 +42,7 @@ export function Header({ activePage, onPageChange }: HeaderProps) {
           <img src={prkBlack} alt="" className="h-7 w-auto" />
         </a>
         <div className="min-w-0 leading-none">
-          <p className="font-serif text-[1.35rem] italic tracking-tight">
+          <p className="font-bold text-[1.35rem] tracking-tight">
             Color Palette Toolkit
           </p>
           <p className="mt-0.5 hidden text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground sm:block">

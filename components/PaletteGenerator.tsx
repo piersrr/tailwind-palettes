@@ -383,7 +383,7 @@ export function PaletteGenerator() {
 
   return (
     <div className="space-y-12">
-      <PageIntro kicker="" title="Turn a color into a scale.">
+      <PageIntro kicker="" title="Palette Generator">
         One stop becomes a {stopCount === 10 ? "50–900" : "50–950"} ramp in
         OKLCH. Pin your color to any tile and the rest bends around it, then
         reshape the whole trajectory under Advanced.
@@ -589,8 +589,9 @@ export function PaletteGenerator() {
             {gamutMappedCount > 0 ? (
               <>
                 {" "}
-                {gamutMappedCount} stop{gamutMappedCount === 1 ? "" : "s"} pulled
-                back to fit {params.gamut === "p3" ? "Display P3" : "sRGB"}.
+                {gamutMappedCount} stop{gamutMappedCount === 1 ? "" : "s"}{" "}
+                pulled back to fit{" "}
+                {params.gamut === "p3" ? "Display P3" : "sRGB"}.
               </>
             ) : null}
           </p>
